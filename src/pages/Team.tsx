@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Shield } from "lucide-react";
 import { useTranslation } from "../contexts/TranslationContext";
+import { useAuth } from "../contexts/AuthContext";
 
 type FaceitProfile = {
   id: string;
@@ -39,9 +40,13 @@ const SLOT_COUNT = 5;
 export default function Team() {
   const { id } = useParams<{ id: string }>();
   const { language } = useTranslation();
+  const { user } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [joinSubmitting, setJoinSubmitting] = useState(false);
+  const [joinMessage, setJoinMessage] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -81,6 +86,44 @@ export default function Team() {
       .filter((member) => member.slotNumber >= 1 && member.slotNumber <= SLOT_COUNT)
       .map((member) => [member.slotNumber, member]),
   );
+
+  const requestToJoin = async () => {
+    if (!id || joinSubmitting) return;
+
+    setJoinMessage(null);
+    setJoinError(null);
+
+    if (!user) {
+      setJoinError(language === "fi" ? "Kirjaudu sisään liittyäksesi." : "Log in to request to join.");
+      return;
+    }
+
+    setJoinSubmitting(true);
+    try {
+      const response = await fetch(`/api/teams/${encodeURIComponent(id)}/join-requests`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.error || (language === "fi" ? "Liittymispyynnön lähettäminen epäonnistui." : "Failed to send join request."));
+      }
+
+      setJoinMessage(language === "fi" ? "Liittymispyyntö lähetetty" : "Join request sent");
+    } catch (requestError) {
+      setJoinError(
+        requestError instanceof Error
+          ? requestError.message
+          : language === "fi"
+            ? "Liittymispyynnön lähettäminen epäonnistui."
+            : "Failed to send join request.",
+      );
+    } finally {
+      setJoinSubmitting(false);
+    }
+  };
 
   return (
     <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -129,6 +172,12 @@ export default function Team() {
               </h2>
             </div>
 
+            {(joinMessage || joinError) && (
+              <p className={joinMessage ? "text-emerald-400 text-sm mb-4" : "text-red-300 text-sm mb-4"} role="status">
+                {joinMessage || joinError}
+              </p>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {Array.from({ length: SLOT_COUNT }, (_, index) => {
                 const slotNumber = index + 1;
@@ -136,15 +185,21 @@ export default function Team() {
 
                 if (!member) {
                   return (
-                    <div
+                    <button
                       key={slotNumber}
+                      type="button"
+                      onClick={requestToJoin}
+                      disabled={joinSubmitting}
+                      aria-label={language === "fi" ? `Pyydä paikkaa ${slotNumber}` : `Request slot ${slotNumber}`}
                       className="min-h-56 border border-dashed border-neutral-700 bg-neutral-950/40 rounded-sm flex flex-col items-center justify-center text-neutral-500"
                     >
                       <span className="text-3xl mb-3">+</span>
                       <span className="text-xs font-bold tracking-widest">
-                        {language === "fi" ? "VAPAA PAIKKA" : "OPEN SLOT"}
+                        {joinSubmitting
+                          ? language === "fi" ? "LÄHETETÄÄN..." : "SENDING..."
+                          : language === "fi" ? "VAPAA PAIKKA" : "OPEN SLOT"}
                       </span>
-                    </div>
+                    </button>
                   );
                 }
 

@@ -914,6 +914,75 @@ apiRouter.post("/teams", authMiddleware, async (req, res) => {
   }
 });
 
+// CREATE a team join request (Authenticated)
+apiRouter.post('/teams/:id/join-requests', authMiddleware, async (req, res) => {
+  const userId = (req as any).user.id;
+  const teamId = req.params.id;
+
+  try {
+    const faceitProfile = await prisma.faceitProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!faceitProfile) {
+      return res.status(400).json({ error: 'Liitä FACEIT-profiilisi ensin.' });
+    }
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { id: true },
+    });
+
+    if (!team) {
+      return res.status(404).json({ error: 'Joukkuetta ei löytynyt.' });
+    }
+
+    const existingMembership = await prisma.teamMember.findUnique({
+      where: {
+        teamId_userId: { teamId, userId },
+      },
+      select: { teamId: true },
+    });
+
+    if (existingMembership) {
+      return res.status(400).json({ error: 'Olet jo tämän joukkueen jäsen.' });
+    }
+
+    const activeMemberCount = await prisma.teamMember.count({
+      where: { teamId, status: 'ACTIVE' },
+    });
+
+    if (activeMemberCount >= 5) {
+      return res.status(400).json({ error: 'Joukkue on täynnä.' });
+    }
+
+    const pendingRequest = await prisma.joinRequest.findFirst({
+      where: { teamId, userId, status: 'PENDING' },
+      select: { id: true },
+    });
+
+    if (pendingRequest) {
+      return res.status(400).json({ error: 'Liittymispyyntösi on jo lähetetty.' });
+    }
+
+    const joinRequest = await prisma.joinRequest.create({
+      data: { teamId, userId, status: 'PENDING' },
+    });
+
+    return res.status(201).json({ joinRequest });
+  } catch (error: any) {
+    console.error('Failed to create team join request:', error);
+
+    if (error?.code === 'P2002') {
+      return res.status(400).json({ error: 'Liittymispyyntösi on jo lähetetty.' });
+    }
+
+    return res.status(500).json({
+      error: 'Liittymispyynnön lähettäminen epäonnistui.',
+    });
+  }
+});
+
 // GET teams
 apiRouter.get("/teams", async (req, res) => {
   try {
