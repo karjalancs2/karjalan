@@ -27,15 +27,7 @@ async function startServer() {
       const faceitApiKey = process.env.FACEIT_API_KEY;
       
       if (!faceitApiKey) {
-        return res.json({
-          matchId,
-          status: "live",
-          team1Score: 13,
-          team2Score: 9,
-          map: "Mirage",
-          mock: true,
-          message: "No FACEIT_API_KEY configured. Returning mock data."
-        });
+        return res.status(503).json({ error: "FACEIT_API_KEY is not configured" });
       }
 
       res.json({ matchId, status: "success", note: "Implement real FACEIT API call here" });

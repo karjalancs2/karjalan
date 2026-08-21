@@ -5,14 +5,27 @@ import { prisma } from '../database/prisma';
 
 export const authRouter = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'karjalan-secret-key-development-only';
+const getJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error('JWT_SECRET must be configured with at least 32 characters');
+  }
+  return secret;
+};
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
 
 export const authMiddleware = (req: Request, res: Response, next: Function) => {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     (req as any).user = decoded;
     next();
   } catch (err) {
@@ -38,8 +51,8 @@ authRouter.post('/register', async (req, res) => {
       }
     });
 
-    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, getJwtSecret(), { expiresIn: '7d' });
+    res.cookie('token', token, cookieOptions);
     
     res.status(201).json({ user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   } catch (error: any) {
@@ -61,8 +74,8 @@ authRouter.post('/login', async (req, res) => {
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) return res.status(400).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, getJwtSecret(), { expiresIn: '7d' });
+    res.cookie('token', token, cookieOptions);
 
     res.json({ user: { id: user.id, username: user.username, email: user.email, role: user.role } });
   } catch (error) {

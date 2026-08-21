@@ -17,7 +17,7 @@ model User {
   username        String       @unique
   email           String       @unique
   passwordHash    String
-  role            String       @default("USER") // USER, TEAM_CAPTAIN, ADMIN
+  role            String       @default("USER")
   country         String       @default("FI")
   faceitLevel     Int?
   faceitUsername  String?
@@ -56,12 +56,17 @@ model Team {
 }
 
 model TeamMember {
-  teamId String
-  userId String
-  team   Team @relation(fields: [teamId], references: [id])
-  user   User @relation(fields: [userId], references: [id])
+  teamId     String
+  userId     String
+  slotNumber Int
+  role       String   @default("MEMBER")
+  status     String   @default("ACTIVE")
+
+  team       Team @relation(fields: [teamId], references: [id])
+  user       User @relation(fields: [userId], references: [id])
   
   @@id([teamId, userId])
+  @@unique([teamId, slotNumber])
 }
 
 model Tournament {
