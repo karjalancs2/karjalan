@@ -806,6 +806,45 @@ apiRouter.get("/rankings/teams", async (req, res) => {
 });
 
 // CREATE team (Authenticated) — require a linked FACEIT profile first
+apiRouter.get('/teams/:id', async (req, res) => {
+  try {
+    const team = await prisma.team.findUnique({
+      where: { id: req.params.id },
+      include: {
+        captain: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        members: {
+          orderBy: { slotNumber: 'asc' },
+          include: {
+            faceitProfile: true,
+            user: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!team) {
+      return res.status(404).json({ error: 'Joukkuetta ei löytynyt.' });
+    }
+
+    return res.json({ team });
+  } catch (error) {
+    console.error('Failed to fetch team:', error);
+    return res.status(500).json({
+      error: 'Joukkueen tietojen haku epäonnistui.',
+    });
+  }
+});
+
 apiRouter.post("/teams", authMiddleware, async (req, res) => {
   const userId = (req as any).user.id;
   const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
@@ -815,44 +854,6 @@ apiRouter.post("/teams", authMiddleware, async (req, res) => {
   }
 
   try {
-    apiRouter.get('/teams/:id', async (req, res) => {
-      try {
-        const team = await prisma.team.findUnique({
-          where: { id: req.params.id },
-          include: {
-            captain: {
-              select: {
-                id: true,
-                username: true,
-              },
-            },
-            members: {
-              orderBy: { slotNumber: 'asc' },
-              include: {
-                faceitProfile: true,
-                user: {
-                  select: {
-                    id: true,
-                    username: true,
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        if (!team) {
-          return res.status(404).json({ error: 'Joukkuetta ei löytynyt.' });
-        }
-
-        return res.json({ team });
-      } catch (error) {
-        console.error('Failed to fetch team:', error);
-        return res.status(500).json({
-          error: 'Joukkueen tietojen haku epäonnistui.',
-        });
-      }
-    });
     const faceitProfile = await prisma.faceitProfile.findUnique({
       where: { userId },
     });
@@ -910,6 +911,38 @@ apiRouter.post("/teams", authMiddleware, async (req, res) => {
 
     return res.status(500).json({
       error: "Joukkueen luominen epäonnistui. Yritä uudelleen.",
+    });
+  }
+});
+
+// GET teams looking for players
+apiRouter.get('/teams', async (_req, res) => {
+  try {
+    const teams = await prisma.team.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        captain: {
+          select: {
+            id: true,
+            username: true,
+            faceitProfile: true,
+          },
+        },
+        members: {
+          where: { status: 'ACTIVE' },
+          orderBy: { slotNumber: 'asc' },
+          include: {
+            faceitProfile: true,
+          },
+        },
+      },
+    });
+
+    return res.json(teams.filter((team) => team.members.length < 5));
+  } catch (error) {
+    console.error('Failed to fetch teams looking for players:', error);
+    return res.status(500).json({
+      error: 'Joukkueiden haku epäonnistui.',
     });
   }
 });
@@ -1114,18 +1147,6 @@ apiRouter.post('/teams/:id/join-requests/:requestId/accept', authMiddleware, asy
     return res.status(500).json({
       error: 'Liittymispyynnön hyväksyminen epäonnistui.',
     });
-  }
-});
-
-// GET teams
-apiRouter.get("/teams", async (req, res) => {
-  try {
-    const teams = await prisma.team.findMany({
-      orderBy: { rankingPoints: "desc" },
-    });
-    res.json(teams);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch teams" });
   }
 });
 
