@@ -1,22 +1,25 @@
-import { Router } from 'express';
-import { prisma } from '../database/prisma';
-import { authRouter, authMiddleware } from '../auth';
-import { faceitService } from '../integrations/faceit/faceitService';
+import { Router } from "express";
+import { prisma } from "../database/prisma";
+import { authRouter, authMiddleware } from "../auth";
+import { faceitService } from "../integrations/faceit/faceitService";
 
 export const apiRouter = Router();
 
-apiRouter.use('/auth', authRouter);
+apiRouter.use("/auth", authRouter);
 
 // Link and verify FACEIT profile for authenticated user
-apiRouter.post('/auth/faceit/link', authMiddleware, async (req, res) => {
+apiRouter.post("/auth/faceit/link", authMiddleware, async (req, res) => {
   const { faceitUrl } = req.body;
   const userId = (req as any).user.id;
 
-  if (!faceitUrl) return res.status(400).json({ error: 'FACEIT URL required' });
+  if (!faceitUrl) return res.status(400).json({ error: "FACEIT URL required" });
 
   try {
     const profile = await faceitService.getPlayerProfile(faceitUrl);
-    if (!profile || !profile.playerId) return res.status(400).json({ error: 'FACEIT profile could not be verified' });
+    if (!profile || !profile.playerId)
+      return res
+        .status(400)
+        .json({ error: "FACEIT profile could not be verified" });
 
     // Upsert FaceitProfile record and update user fields for compatibility
     const faceitRecord = await prisma.faceitProfile.upsert({
@@ -28,7 +31,7 @@ apiRouter.post('/auth/faceit/link', authMiddleware, async (req, res) => {
         avatar: profile.avatar,
         elo: profile.elo ? Math.floor(profile.elo) : null,
         level: profile.level ? Number(profile.level) : null,
-        profileUrl: profile.profileUrl || null
+        profileUrl: profile.profileUrl || null,
       },
       update: {
         playerId: profile.playerId,
@@ -36,8 +39,8 @@ apiRouter.post('/auth/faceit/link', authMiddleware, async (req, res) => {
         avatar: profile.avatar,
         elo: profile.elo ? Math.floor(profile.elo) : null,
         level: profile.level ? Number(profile.level) : null,
-        profileUrl: profile.profileUrl || null
-      }
+        profileUrl: profile.profileUrl || null,
+      },
     });
 
     const updated = await prisma.user.update({
@@ -48,92 +51,164 @@ apiRouter.post('/auth/faceit/link', authMiddleware, async (req, res) => {
         faceitAvatar: profile.avatar,
         faceitElo: profile.elo ? Math.floor(profile.elo) : null,
         faceitLevel: profile.level ? Number(profile.level) : null,
-        faceitVerifiedAt: new Date()
-      }
+        faceitVerifiedAt: new Date(),
+      },
     });
 
-    res.json({ success: true, profile: { playerId: profile.playerId, nickname: profile.nickname, avatar: profile.avatar, elo: profile.elo, level: profile.level } });
+    res.json({
+      success: true,
+      profile: {
+        playerId: profile.playerId,
+        nickname: profile.nickname,
+        avatar: profile.avatar,
+        elo: profile.elo,
+        level: profile.level,
+      },
+    });
   } catch (err: any) {
-    console.error('Failed to link FACEIT profile:', err);
-    res.status(500).json({ error: 'Failed to verify FACEIT profile' });
+    console.error("Failed to link FACEIT profile:", err);
+    res.status(500).json({ error: "Failed to verify FACEIT profile" });
   }
 });
 
 // GET all tournaments
-apiRouter.get('/tournaments', async (req, res) => {
+apiRouter.get("/tournaments", async (req, res) => {
   const tournaments = await prisma.tournament.findMany();
   res.json(tournaments);
 });
 
 // GET tournament by ID
-apiRouter.get('/tournaments/:id', async (req, res) => {
+apiRouter.get("/tournaments/:id", async (req, res) => {
   const { id } = req.params;
   const tournament = await prisma.tournament.findUnique({ where: { id } });
   res.json(tournament || null);
 });
 
 // GET matches by tournament
-apiRouter.get('/tournaments/:id/matches', async (req, res) => {
+apiRouter.get("/tournaments/:id/matches", async (req, res) => {
   const { id } = req.params;
   const matches = await prisma.match.findMany({ where: { tournamentId: id } });
   res.json(matches);
 });
 
 // GET lobbies
-apiRouter.get('/lobbies', async (req, res) => {
+apiRouter.get("/lobbies", async (req, res) => {
   const lobbies = await prisma.lobby.findMany({
     include: {
       // Include members (authoritative), slots, and the related user for each occupied slot
-      members: { orderBy: { slotIndex: 'asc' }, include: { user: true, faceitProfile: true } },
+      members: {
+        orderBy: { slotIndex: "asc" },
+        include: { user: true, faceitProfile: true },
+      },
       slots: {
-        orderBy: { slotIndex: 'asc' },
-        include: { user: { select: { id: true, username: true, email: true, faceitId: true, faceitUsername: true, faceitAvatar: true, faceitElo: true, faceitVerifiedAt: true, role: true, country: true, inGameRole: true } } }
+        orderBy: { slotIndex: "asc" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              faceitId: true,
+              faceitUsername: true,
+              faceitAvatar: true,
+              faceitElo: true,
+              faceitVerifiedAt: true,
+              role: true,
+              country: true,
+              inGameRole: true,
+            },
+          },
+        },
       },
       // Include captain basic info
-      captain: { select: { id: true, username: true, email: true, faceitId: true, faceitUsername: true, faceitAvatar: true } }
-    }
+      captain: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          faceitId: true,
+          faceitUsername: true,
+          faceitAvatar: true,
+        },
+      },
+    },
   });
   res.json(lobbies);
 });
 
 // GET single lobby by id
-apiRouter.get('/lobbies/:id', async (req, res) => {
+apiRouter.get("/lobbies/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const lobby = await prisma.lobby.findUnique({
       where: { id },
       include: {
-        members: { orderBy: { slotIndex: 'asc' }, include: { user: true, faceitProfile: true } },
-        slots: { orderBy: { slotIndex: 'asc' }, include: { user: { select: { id: true, username: true, email: true, faceitId: true, faceitUsername: true, faceitAvatar: true, faceitElo: true, faceitVerifiedAt: true, role: true, country: true, inGameRole: true } } } },
-        captain: { select: { id: true, username: true, email: true, faceitId: true, faceitUsername: true, faceitAvatar: true } },
-        requests: { include: { user: true } }
-      }
+        members: {
+          orderBy: { slotIndex: "asc" },
+          include: { user: true, faceitProfile: true },
+        },
+        slots: {
+          orderBy: { slotIndex: "asc" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                email: true,
+                faceitId: true,
+                faceitUsername: true,
+                faceitAvatar: true,
+                faceitElo: true,
+                faceitVerifiedAt: true,
+                role: true,
+                country: true,
+                inGameRole: true,
+              },
+            },
+          },
+        },
+        captain: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            faceitId: true,
+            faceitUsername: true,
+            faceitAvatar: true,
+          },
+        },
+        requests: { include: { user: true } },
+      },
     });
-    if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
+    if (!lobby) return res.status(404).json({ error: "Lobby not found" });
     res.json(lobby);
   } catch (err) {
-    console.error('Failed to fetch lobby:', err);
-    res.status(500).json({ error: 'Failed to fetch lobby' });
+    console.error("Failed to fetch lobby:", err);
+    res.status(500).json({ error: "Failed to fetch lobby" });
   }
 });
 
 // CREATE lobby (Authenticated) — require FACEIT profile verification first
-apiRouter.post('/lobbies', authMiddleware, async (req, res) => {
+apiRouter.post("/lobbies", authMiddleware, async (req, res) => {
   const { tournamentId, name, description, faceitUrl } = req.body;
   const userId = (req as any).user.id;
 
   try {
     // Load user to check if they already have a FACEIT profile
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     // If user has no verified faceitId, require faceitUrl and verify it
     if (!user.faceitId) {
-      if (!faceitUrl) return res.status(400).json({ error: 'FACEIT profile required' });
+      if (!faceitUrl)
+        return res.status(400).json({ error: "FACEIT profile required" });
 
       // Verify via faceitService
       const profile = await faceitService.getPlayerProfile(faceitUrl);
-      if (!profile || !profile.playerId) return res.status(400).json({ error: 'FACEIT profile could not be verified' });
+      if (!profile || !profile.playerId)
+        return res
+          .status(400)
+          .json({ error: "FACEIT profile could not be verified" });
 
       // Update user with verified FACEIT info
       await prisma.user.update({
@@ -145,23 +220,38 @@ apiRouter.post('/lobbies', authMiddleware, async (req, res) => {
           faceitElo: profile.elo ? Math.floor(profile.elo) : null,
           faceitLevel: profile.level ? Number(profile.level) : null,
           faceitVerifiedAt: new Date(),
-          role: 'TEAM_CAPTAIN'
-        }
+          role: "TEAM_CAPTAIN",
+        },
       });
     } else {
       // ensure user has captain role set
-      if (user.role !== 'TEAM_CAPTAIN') {
-        await prisma.user.update({ where: { id: userId }, data: { role: 'TEAM_CAPTAIN' } });
+      if (user.role !== "TEAM_CAPTAIN") {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { role: "TEAM_CAPTAIN" },
+        });
       }
     }
 
     // Create lobby, slots and creator member transactionally
     const result = await prisma.$transaction(async (tx) => {
       // Ensure FaceitProfile exists for creator (use existing or create from user fields)
-      let faceitRecord = await tx.faceitProfile.findUnique({ where: { userId } });
+      let faceitRecord = await tx.faceitProfile.findUnique({
+        where: { userId },
+      });
       if (!faceitRecord) {
         if (user.faceitId) {
-          faceitRecord = await tx.faceitProfile.create({ data: { userId, playerId: user.faceitId, username: user.faceitUsername || user.username, avatar: user.faceitAvatar || null, elo: user.faceitElo || null, level: user.faceitLevel || null, profileUrl: null } });
+          faceitRecord = await tx.faceitProfile.create({
+            data: {
+              userId,
+              playerId: user.faceitId,
+              username: user.faceitUsername || user.username,
+              avatar: user.faceitAvatar || null,
+              elo: user.faceitElo || null,
+              level: user.faceitLevel || null,
+              profileUrl: null,
+            },
+          });
         }
       }
 
@@ -171,15 +261,15 @@ apiRouter.post('/lobbies', authMiddleware, async (req, res) => {
           name,
           captainId: userId,
           description,
-        }
+        },
       });
 
       const slotsData = [
-        { userId: userId, status: 'occupied', slotIndex: 0 },
-        { status: 'empty', slotIndex: 1 },
-        { status: 'empty', slotIndex: 2 },
-        { status: 'empty', slotIndex: 3 },
-        { status: 'empty', slotIndex: 4 },
+        { userId: userId, status: "occupied", slotIndex: 0 },
+        { status: "empty", slotIndex: 1 },
+        { status: "empty", slotIndex: 2 },
+        { status: "empty", slotIndex: 3 },
+        { status: "empty", slotIndex: 4 },
       ];
 
       for (const s of slotsData) {
@@ -187,43 +277,48 @@ apiRouter.post('/lobbies', authMiddleware, async (req, res) => {
       }
 
       // Create the LobbyMember record for the captain occupying slot 0
-      await tx.lobbyMember.create({ data: {
-        lobbyId: lobby.id,
-        userId,
-        faceitProfileId: faceitRecord ? faceitRecord.id : null,
-        slotIndex: 0,
-        role: 'CAPTAIN',
-        status: 'active'
-      }});
+      await tx.lobbyMember.create({
+        data: {
+          lobbyId: lobby.id,
+          userId,
+          faceitProfileId: faceitRecord ? faceitRecord.id : null,
+          slotIndex: 0,
+          role: "CAPTAIN",
+          status: "active",
+        },
+      });
 
       // Ensure user role is captain
-      await tx.user.update({ where: { id: userId }, data: { role: 'TEAM_CAPTAIN' } });
+      await tx.user.update({
+        where: { id: userId },
+        data: { role: "TEAM_CAPTAIN" },
+      });
 
       return lobby;
     });
 
     res.json({ id: result.id });
   } catch (error: any) {
-    console.error('Failed to create lobby:', error);
-    res.status(500).json({ error: 'Failed to create lobby' });
+    console.error("Failed to create lobby:", error);
+    res.status(500).json({ error: "Failed to create lobby" });
   }
 });
 
 // DELETE lobby (Authenticated) — only captain or special admin email can remove
-apiRouter.delete('/lobbies/:id', authMiddleware, async (req, res) => {
+apiRouter.delete("/lobbies/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const userId = (req as any).user.id;
 
   try {
     const lobby = await prisma.lobby.findUnique({ where: { id } });
-    if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
+    if (!lobby) return res.status(404).json({ error: "Lobby not found" });
 
     // Load requester's email from DB (token may not contain email)
     const requester = await prisma.user.findUnique({ where: { id: userId } });
-    const isAdminByEmail = requester?.email === 'samuelgaffney@outlook.com';
+    const isAdminByEmail = requester?.email === "samuelgaffney@outlook.com";
 
     if (lobby.captainId !== userId && !isAdminByEmail) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return res.status(403).json({ error: "Forbidden" });
     }
 
     // Transactionally remove related data and the lobby
@@ -238,13 +333,13 @@ apiRouter.delete('/lobbies/:id', authMiddleware, async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete lobby:', error);
-    res.status(500).json({ error: 'Failed to delete lobby' });
+    console.error("Failed to delete lobby:", error);
+    res.status(500).json({ error: "Failed to delete lobby" });
   }
 });
 
 // JOIN lobby slot (Authenticated)
-apiRouter.post('/lobbies/:id/join', authMiddleware, async (req, res) => {
+apiRouter.post("/lobbies/:id/join", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { slotId } = req.body;
   const userId = (req as any).user.id;
@@ -252,29 +347,31 @@ apiRouter.post('/lobbies/:id/join', authMiddleware, async (req, res) => {
   try {
     // Check if slot is empty
     const slot = await prisma.lobbySlot.findUnique({ where: { id: slotId } });
-    if (!slot || slot.lobbyId !== id || slot.status !== 'empty') {
-      return res.status(400).json({ error: 'Slot not available' });
+    if (!slot || slot.lobbyId !== id || slot.status !== "empty") {
+      return res.status(400).json({ error: "Slot not available" });
     }
 
     await prisma.lobbySlot.update({
       where: { id: slotId },
-      data: { userId, status: 'occupied' }
+      data: { userId, status: "occupied" },
     });
 
     // Check if lobby is now full
-    const allSlots = await prisma.lobbySlot.findMany({ where: { lobbyId: id } });
-    if (allSlots.every(s => s.status === 'occupied')) {
-      await prisma.lobby.update({ where: { id }, data: { status: 'ready' } });
+    const allSlots = await prisma.lobbySlot.findMany({
+      where: { lobbyId: id },
+    });
+    if (allSlots.every((s) => s.status === "occupied")) {
+      await prisma.lobby.update({ where: { id }, data: { status: "ready" } });
     }
 
     res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // CREATE a join request (Authenticated) — players request to join, captain reviews
-apiRouter.post('/lobbies/:id/requests', authMiddleware, async (req, res) => {
+apiRouter.post("/lobbies/:id/requests", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { message, slotId } = req.body;
   const userId = (req as any).user.id;
@@ -282,10 +379,13 @@ apiRouter.post('/lobbies/:id/requests', authMiddleware, async (req, res) => {
   try {
     // Simple validation
     const lobby = await prisma.lobby.findUnique({ where: { id } });
-    if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
+    if (!lobby) return res.status(404).json({ error: "Lobby not found" });
 
-    const existing = await prisma.lobbyRequest.findMany({ where: { lobbyId: id, userId } });
-    if (existing.length > 0) return res.status(400).json({ error: 'Request already submitted' });
+    const existing = await prisma.lobbyRequest.findMany({
+      where: { lobbyId: id, userId },
+    });
+    if (existing.length > 0)
+      return res.status(400).json({ error: "Request already submitted" });
 
     const reqRec = await prisma.lobbyRequest.create({
       data: {
@@ -293,22 +393,25 @@ apiRouter.post('/lobbies/:id/requests', authMiddleware, async (req, res) => {
         userId,
         slotId: slotId || null,
         message: message || null,
-      }
+      },
     });
 
     // Create a notification for the captain
     try {
-      const lobbyCaptain = await prisma.lobby.findUnique({ where: { id }, select: { captainId: true, name: true } });
+      const lobbyCaptain = await prisma.lobby.findUnique({
+        where: { id },
+        select: { captainId: true, name: true },
+      });
       if (lobbyCaptain && lobbyCaptain.captainId) {
         await prisma.notification.create({
           data: {
             recipientId: lobbyCaptain.captainId,
-            type: 'join_request',
-            title: 'Uusi liittymispyyntö',
-            message: `${(req as any).user.username || 'A player'} haluaa liittyä joukkueeseesi.`,
+            type: "join_request",
+            title: "Uusi liittymispyyntö",
+            message: `${(req as any).user.username || "A player"} haluaa liittyä joukkueeseesi.`,
             lobbyId: id,
-            joinRequestId: reqRec.id
-          }
+            joinRequestId: reqRec.id,
+          },
         });
       }
 
@@ -316,304 +419,447 @@ apiRouter.post('/lobbies/:id/requests', authMiddleware, async (req, res) => {
       await prisma.notification.create({
         data: {
           recipientId: userId,
-          type: 'request_sent',
-          title: 'Liittymispyyntö lähetetty',
-          message: `Liittymispyyntö joukkueeseen ${lobbyCaptain?.name || ''} lähetetty.`,
+          type: "request_sent",
+          title: "Liittymispyyntö lähetetty",
+          message: `Liittymispyyntö joukkueeseen ${lobbyCaptain?.name || ""} lähetetty.`,
           lobbyId: id,
-          joinRequestId: reqRec.id
-        }
+          joinRequestId: reqRec.id,
+        },
       });
     } catch (notifErr) {
-      console.error('Failed to create notification:', notifErr);
+      console.error("Failed to create notification:", notifErr);
     }
 
     res.json(reqRec);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to create request' });
+    res.status(500).json({ error: "Failed to create request" });
   }
 });
 
 // GET requests for a lobby (Authenticated) — only captain should retrieve
-apiRouter.get('/lobbies/:id/requests', authMiddleware, async (req, res) => {
+apiRouter.get("/lobbies/:id/requests", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const userId = (req as any).user.id;
 
   try {
     const lobby = await prisma.lobby.findUnique({ where: { id } });
-    if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
-    if (lobby.captainId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    if (!lobby) return res.status(404).json({ error: "Lobby not found" });
+    if (lobby.captainId !== userId)
+      return res.status(403).json({ error: "Forbidden" });
 
-    const requests = await prisma.lobbyRequest.findMany({ where: { lobbyId: id, status: 'pending' }, include: { user: true } });
+    const requests = await prisma.lobbyRequest.findMany({
+      where: { lobbyId: id, status: "pending" },
+      include: { user: true },
+    });
     res.json(requests);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to fetch requests' });
+    res.status(500).json({ error: "Failed to fetch requests" });
   }
 });
 
 // ACCEPT a request (Authenticated, captain only)
-apiRouter.post('/lobbies/:lobbyId/requests/:reqId/accept', authMiddleware, async (req, res) => {
-  const { lobbyId, reqId } = req.params;
-  const userId = (req as any).user.id;
+apiRouter.post(
+  "/lobbies/:lobbyId/requests/:reqId/accept",
+  authMiddleware,
+  async (req, res) => {
+    const { lobbyId, reqId } = req.params;
+    const userId = (req as any).user.id;
 
-  try {
-    const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId }, include: { slots: true } });
-    if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
-    if (lobby.captainId !== userId) return res.status(403).json({ error: 'Forbidden' });
-
-    const request = await prisma.lobbyRequest.findUnique({ where: { id: reqId } });
-    if (!request || request.lobbyId !== lobbyId) return res.status(404).json({ error: 'Request not found' });
-    if (request.status !== 'pending') return res.status(400).json({ error: 'Request already handled' });
-
-    // Transactionally accept request, occupy slot and create LobbyMember
-    const result = await prisma.$transaction(async (tx) => {
-      // Find slot to occupy
-      let slot = null as any;
-      if (request.slotId) {
-        slot = await tx.lobbySlot.findUnique({ where: { id: request.slotId } });
-        if (!slot || slot.status !== 'empty') slot = null;
-      }
-      if (!slot) {
-        slot = await tx.lobbySlot.findFirst({ where: { lobbyId, status: 'empty' }, orderBy: { slotIndex: 'asc' } });
-      }
-      if (!slot) throw new Error('No empty slots');
-
-      // Update slot to occupied
-      await tx.lobbySlot.update({ where: { id: slot.id }, data: { userId: request.userId, status: 'occupied' } });
-
-      // Ensure faceit profile exists for the accepted user
-      let faceitRecord = await tx.faceitProfile.findUnique({ where: { userId: request.userId } });
-      if (!faceitRecord) {
-        // attempt to use user stored faceit fields
-        const reqUser = await tx.user.findUnique({ where: { id: request.userId } });
-        if (reqUser?.faceitId) {
-          faceitRecord = await tx.faceitProfile.create({ data: { userId: request.userId, playerId: reqUser.faceitId, username: reqUser.faceitUsername || reqUser.username, avatar: reqUser.faceitAvatar || null, elo: reqUser.faceitElo || null, level: reqUser.faceitLevel || null } });
-        }
-      }
-
-      // Create LobbyMember record
-      await tx.lobbyMember.create({ data: {
-        lobbyId,
-        userId: request.userId,
-        faceitProfileId: faceitRecord ? faceitRecord.id : null,
-        slotIndex: slot.slotIndex,
-        role: 'MEMBER',
-        status: 'active'
-      }});
-
-      // Update request status
-      await tx.lobbyRequest.update({ where: { id: reqId }, data: { status: 'accepted' } });
-
-      // Check if now full and update lobby status
-      const allSlots = await tx.lobbySlot.findMany({ where: { lobbyId } });
-      if (allSlots.every(s => s.status === 'occupied')) {
-        await tx.lobby.update({ where: { id: lobbyId }, data: { status: 'ready' } });
-      }
-
-      return { slotIndex: slot.slotIndex };
-    });
-
-    // Create notification for the accepted player
     try {
-      await prisma.notification.create({
-        data: {
-          recipientId: request.userId,
-          type: 'request_accepted',
-          title: 'Hyväksytty joukkueeseen',
-          message: `Sinut hyväksyttiin joukkueeseen ${lobby.name}.`,
-          lobbyId: lobbyId,
-          joinRequestId: reqId
-        }
+      const lobby = await prisma.lobby.findUnique({
+        where: { id: lobbyId },
+        include: { slots: true },
       });
-    } catch (notifErr) {
-      console.error('Failed to create accept notification:', notifErr);
-    }
+      if (!lobby) return res.status(404).json({ error: "Lobby not found" });
+      if (lobby.captainId !== userId)
+        return res.status(403).json({ error: "Forbidden" });
 
-    // If full, notify captain about full team
-    try {
-      const allSlots = await prisma.lobbySlot.findMany({ where: { lobbyId } });
-      if (allSlots.every(s => s.status === 'occupied')) {
-        await prisma.notification.create({ data: { recipientId: lobby.captainId, type: 'team_full', title: 'Joukkue täynnä', message: `Joukkue ${lobby.name} on nyt täynnä.`, lobbyId } });
-      }
-    } catch (notifErr) {
-      console.error('Failed to create team full notification:', notifErr);
-    }
-
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error(error);
-    if (error.message === 'No empty slots') return res.status(400).json({ error: 'No empty slots' });
-    res.status(500).json({ error: 'Failed to accept request' });
-  }
-});
-
-// REJECT a request (Authenticated, captain only)
-apiRouter.post('/lobbies/:lobbyId/requests/:reqId/reject', authMiddleware, async (req, res) => {
-  const { lobbyId, reqId } = req.params;
-  const userId = (req as any).user.id;
-
-  try {
-    const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
-    if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
-    if (lobby.captainId !== userId) return res.status(403).json({ error: 'Forbidden' });
-
-    const request = await prisma.lobbyRequest.findUnique({ where: { id: reqId } });
-    if (!request || request.lobbyId !== lobbyId) return res.status(404).json({ error: 'Request not found' });
-    if (request.status !== 'pending') return res.status(400).json({ error: 'Request already handled' });
-
-    await prisma.lobbyRequest.update({ where: { id: reqId }, data: { status: 'rejected' } });
-
-    try {
-      await prisma.notification.create({
-        data: {
-          recipientId: request.userId,
-          type: 'request_rejected',
-          title: 'Liittymispyyntö hylätty',
-          message: `Liittymispyyntösi joukkueeseen ${lobby.name} hylättiin.`,
-          lobbyId: lobbyId,
-          joinRequestId: reqId
-        }
+      const request = await prisma.lobbyRequest.findUnique({
+        where: { id: reqId },
       });
-    } catch (notifErr) {
-      console.error('Failed to create reject notification:', notifErr);
-    }
+      if (!request || request.lobbyId !== lobbyId)
+        return res.status(404).json({ error: "Request not found" });
+      if (request.status !== "pending")
+        return res.status(400).json({ error: "Request already handled" });
 
-    res.json({ success: true });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to reject request' });
-  }
-});
-
-// Chat: get messages
-apiRouter.get('/lobbies/:id/chat/messages', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  try {
-    const messages = await prisma.lobbyChatMessage.findMany({ where: { lobbyId: id }, orderBy: { createdAt: 'asc' }, include: { user: { select: { id: true, username: true } } } });
-    res.json(messages);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch chat messages' });
-  }
-});
-
-// Chat: post message
-apiRouter.post('/lobbies/:id/chat/messages', authMiddleware, async (req, res) => {
-  const { id } = req.params;
-  const { content } = req.body;
-  const userId = (req as any).user.id;
-
-  try {
-    // Verify membership (captain or occupied slot)
-    const lobby = await prisma.lobby.findUnique({ where: { id }, include: { slots: true } });
-    if (!lobby) return res.status(404).json({ error: 'Lobby not found' });
-
-    const isMember = lobby.captainId === userId || lobby.slots.some(s => s.userId === userId);
-    if (!isMember) return res.status(403).json({ error: 'Only team members can post messages' });
-
-    const msg = await prisma.lobbyChatMessage.create({ data: { lobbyId: id, userId, content } });
-
-    // Notify all other members about the new message
-    try {
-      const lobbyWithSlots = await prisma.lobby.findUnique({ where: { id }, include: { slots: true } });
-      if (lobbyWithSlots) {
-        const memberIds = new Set<string>();
-        memberIds.add(lobbyWithSlots.captainId);
-        for (const s of lobbyWithSlots.slots) if (s.userId) memberIds.add(s.userId);
-        for (const memberId of memberIds) {
-          if (memberId === userId) continue; // don't notify sender
-          await prisma.notification.create({
-            data: {
-              recipientId: memberId,
-              type: 'chat_message',
-              title: 'Uusi tiimiviesti',
-              message: `Uusi viesti joukkueessa ${lobbyWithSlots.name}.`,
-              lobbyId: id
-            }
+      // Transactionally accept request, occupy slot and create LobbyMember
+      const result = await prisma.$transaction(async (tx) => {
+        // Find slot to occupy
+        let slot = null as any;
+        if (request.slotId) {
+          slot = await tx.lobbySlot.findUnique({
+            where: { id: request.slotId },
+          });
+          if (!slot || slot.status !== "empty") slot = null;
+        }
+        if (!slot) {
+          slot = await tx.lobbySlot.findFirst({
+            where: { lobbyId, status: "empty" },
+            orderBy: { slotIndex: "asc" },
           });
         }
-      }
-    } catch (notifErr) {
-      console.error('Failed to create chat notifications:', notifErr);
-    }
+        if (!slot) throw new Error("No empty slots");
 
-    res.json({ success: true, message: msg });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to post message' });
-  }
-});
+        // Update slot to occupied
+        await tx.lobbySlot.update({
+          where: { id: slot.id },
+          data: { userId: request.userId, status: "occupied" },
+        });
+
+        // Ensure faceit profile exists for the accepted user
+        let faceitRecord = await tx.faceitProfile.findUnique({
+          where: { userId: request.userId },
+        });
+        if (!faceitRecord) {
+          // attempt to use user stored faceit fields
+          const reqUser = await tx.user.findUnique({
+            where: { id: request.userId },
+          });
+          if (reqUser?.faceitId) {
+            faceitRecord = await tx.faceitProfile.create({
+              data: {
+                userId: request.userId,
+                playerId: reqUser.faceitId,
+                username: reqUser.faceitUsername || reqUser.username,
+                avatar: reqUser.faceitAvatar || null,
+                elo: reqUser.faceitElo || null,
+                level: reqUser.faceitLevel || null,
+              },
+            });
+          }
+        }
+
+        // Create LobbyMember record
+        await tx.lobbyMember.create({
+          data: {
+            lobbyId,
+            userId: request.userId,
+            faceitProfileId: faceitRecord ? faceitRecord.id : null,
+            slotIndex: slot.slotIndex,
+            role: "MEMBER",
+            status: "active",
+          },
+        });
+
+        // Update request status
+        await tx.lobbyRequest.update({
+          where: { id: reqId },
+          data: { status: "accepted" },
+        });
+
+        // Check if now full and update lobby status
+        const allSlots = await tx.lobbySlot.findMany({ where: { lobbyId } });
+        if (allSlots.every((s) => s.status === "occupied")) {
+          await tx.lobby.update({
+            where: { id: lobbyId },
+            data: { status: "ready" },
+          });
+        }
+
+        return { slotIndex: slot.slotIndex };
+      });
+
+      // Create notification for the accepted player
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientId: request.userId,
+            type: "request_accepted",
+            title: "Hyväksytty joukkueeseen",
+            message: `Sinut hyväksyttiin joukkueeseen ${lobby.name}.`,
+            lobbyId: lobbyId,
+            joinRequestId: reqId,
+          },
+        });
+      } catch (notifErr) {
+        console.error("Failed to create accept notification:", notifErr);
+      }
+
+      // If full, notify captain about full team
+      try {
+        const allSlots = await prisma.lobbySlot.findMany({
+          where: { lobbyId },
+        });
+        if (allSlots.every((s) => s.status === "occupied")) {
+          await prisma.notification.create({
+            data: {
+              recipientId: lobby.captainId,
+              type: "team_full",
+              title: "Joukkue täynnä",
+              message: `Joukkue ${lobby.name} on nyt täynnä.`,
+              lobbyId,
+            },
+          });
+        }
+      } catch (notifErr) {
+        console.error("Failed to create team full notification:", notifErr);
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error(error);
+      if (error.message === "No empty slots")
+        return res.status(400).json({ error: "No empty slots" });
+      res.status(500).json({ error: "Failed to accept request" });
+    }
+  },
+);
+
+// REJECT a request (Authenticated, captain only)
+apiRouter.post(
+  "/lobbies/:lobbyId/requests/:reqId/reject",
+  authMiddleware,
+  async (req, res) => {
+    const { lobbyId, reqId } = req.params;
+    const userId = (req as any).user.id;
+
+    try {
+      const lobby = await prisma.lobby.findUnique({ where: { id: lobbyId } });
+      if (!lobby) return res.status(404).json({ error: "Lobby not found" });
+      if (lobby.captainId !== userId)
+        return res.status(403).json({ error: "Forbidden" });
+
+      const request = await prisma.lobbyRequest.findUnique({
+        where: { id: reqId },
+      });
+      if (!request || request.lobbyId !== lobbyId)
+        return res.status(404).json({ error: "Request not found" });
+      if (request.status !== "pending")
+        return res.status(400).json({ error: "Request already handled" });
+
+      await prisma.lobbyRequest.update({
+        where: { id: reqId },
+        data: { status: "rejected" },
+      });
+
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientId: request.userId,
+            type: "request_rejected",
+            title: "Liittymispyyntö hylätty",
+            message: `Liittymispyyntösi joukkueeseen ${lobby.name} hylättiin.`,
+            lobbyId: lobbyId,
+            joinRequestId: reqId,
+          },
+        });
+      } catch (notifErr) {
+        console.error("Failed to create reject notification:", notifErr);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Failed to reject request" });
+    }
+  },
+);
+
+// Chat: get messages
+apiRouter.get(
+  "/lobbies/:id/chat/messages",
+  authMiddleware,
+  async (req, res) => {
+    const { id } = req.params;
+    try {
+      const messages = await prisma.lobbyChatMessage.findMany({
+        where: { lobbyId: id },
+        orderBy: { createdAt: "asc" },
+        include: { user: { select: { id: true, username: true } } },
+      });
+      res.json(messages);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Failed to fetch chat messages" });
+    }
+  },
+);
+
+// Chat: post message
+apiRouter.post(
+  "/lobbies/:id/chat/messages",
+  authMiddleware,
+  async (req, res) => {
+    const { id } = req.params;
+    const { content } = req.body;
+    const userId = (req as any).user.id;
+
+    try {
+      // Verify membership (captain or occupied slot)
+      const lobby = await prisma.lobby.findUnique({
+        where: { id },
+        include: { slots: true },
+      });
+      if (!lobby) return res.status(404).json({ error: "Lobby not found" });
+
+      const isMember =
+        lobby.captainId === userId ||
+        lobby.slots.some((s) => s.userId === userId);
+      if (!isMember)
+        return res
+          .status(403)
+          .json({ error: "Only team members can post messages" });
+
+      const msg = await prisma.lobbyChatMessage.create({
+        data: { lobbyId: id, userId, content },
+      });
+
+      // Notify all other members about the new message
+      try {
+        const lobbyWithSlots = await prisma.lobby.findUnique({
+          where: { id },
+          include: { slots: true },
+        });
+        if (lobbyWithSlots) {
+          const memberIds = new Set<string>();
+          memberIds.add(lobbyWithSlots.captainId);
+          for (const s of lobbyWithSlots.slots)
+            if (s.userId) memberIds.add(s.userId);
+          for (const memberId of memberIds) {
+            if (memberId === userId) continue; // don't notify sender
+            await prisma.notification.create({
+              data: {
+                recipientId: memberId,
+                type: "chat_message",
+                title: "Uusi tiimiviesti",
+                message: `Uusi viesti joukkueessa ${lobbyWithSlots.name}.`,
+                lobbyId: id,
+              },
+            });
+          }
+        }
+      } catch (notifErr) {
+        console.error("Failed to create chat notifications:", notifErr);
+      }
+
+      res.json({ success: true, message: msg });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Failed to post message" });
+    }
+  },
+);
 
 // NOTIFICATIONS: get list for current user
-apiRouter.get('/notifications', authMiddleware, async (req, res) => {
+apiRouter.get("/notifications", authMiddleware, async (req, res) => {
   const userId = (req as any).user.id;
   try {
-    const notes = await prisma.notification.findMany({ where: { recipientId: userId }, orderBy: { createdAt: 'desc' } });
+    const notes = await prisma.notification.findMany({
+      where: { recipientId: userId },
+      orderBy: { createdAt: "desc" },
+    });
     res.json(notes);
   } catch (err) {
-    console.error('Failed to fetch notifications:', err);
-    res.status(500).json({ error: 'Failed to fetch notifications' });
+    console.error("Failed to fetch notifications:", err);
+    res.status(500).json({ error: "Failed to fetch notifications" });
   }
 });
 
 // Mark single notification as read
-apiRouter.post('/notifications/:id/read', authMiddleware, async (req, res) => {
+apiRouter.post("/notifications/:id/read", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const userId = (req as any).user.id;
   try {
     const note = await prisma.notification.findUnique({ where: { id } });
-    if (!note || note.recipientId !== userId) return res.status(404).json({ error: 'Notification not found' });
+    if (!note || note.recipientId !== userId)
+      return res.status(404).json({ error: "Notification not found" });
     await prisma.notification.update({ where: { id }, data: { isRead: true } });
     res.json({ success: true });
   } catch (err) {
-    console.error('Failed to mark notification read:', err);
-    res.status(500).json({ error: 'Failed to update notification' });
+    console.error("Failed to mark notification read:", err);
+    res.status(500).json({ error: "Failed to update notification" });
   }
 });
 
 // Mark all notifications read
-apiRouter.post('/notifications/mark-all-read', authMiddleware, async (req, res) => {
-  const userId = (req as any).user.id;
-  try {
-    await prisma.notification.updateMany({ where: { recipientId: userId, isRead: false }, data: { isRead: true } });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Failed to mark all notifications read:', err);
-    res.status(500).json({ error: 'Failed to update notifications' });
-  }
-});
+apiRouter.post(
+  "/notifications/mark-all-read",
+  authMiddleware,
+  async (req, res) => {
+    const userId = (req as any).user.id;
+    try {
+      await prisma.notification.updateMany({
+        where: { recipientId: userId, isRead: false },
+        data: { isRead: true },
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Failed to mark all notifications read:", err);
+      res.status(500).json({ error: "Failed to update notifications" });
+    }
+  },
+);
 
 // GET rankings
-apiRouter.get('/rankings/teams', async (req, res) => {
+apiRouter.get("/rankings/teams", async (req, res) => {
   try {
     const teams = await prisma.team.findMany({
-      orderBy: { rankingPoints: 'desc' },
-      take: 100
+      orderBy: { rankingPoints: "desc" },
+      take: 100,
     });
     res.json(teams);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch rankings' });
+    res.status(500).json({ error: "Failed to fetch rankings" });
   }
 });
 
 // CREATE team (Authenticated) — require a linked FACEIT profile first
-apiRouter.post('/teams', authMiddleware, async (req, res) => {
+apiRouter.post("/teams", authMiddleware, async (req, res) => {
   const userId = (req as any).user.id;
-  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
 
   if (!name) {
-    return res.status(400).json({ error: 'Joukkueen nimi vaaditaan.' });
+    return res.status(400).json({ error: "Joukkueen nimi vaaditaan." });
   }
 
   try {
+    apiRouter.get('/teams/:id', async (req, res) => {
+      try {
+        const team = await prisma.team.findUnique({
+          where: { id: req.params.id },
+          include: {
+            captain: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+            members: {
+              orderBy: { slotNumber: 'asc' },
+              include: {
+                faceitProfile: true,
+                user: {
+                  select: {
+                    id: true,
+                    username: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!team) {
+          return res.status(404).json({ error: 'Joukkuetta ei löytynyt.' });
+        }
+
+        return res.json({ team });
+      } catch (error) {
+        console.error('Failed to fetch team:', error);
+        return res.status(500).json({
+          error: 'Joukkueen tietojen haku epäonnistui.',
+        });
+      }
+    });
     const faceitProfile = await prisma.faceitProfile.findUnique({
       where: { userId },
     });
 
     if (!faceitProfile) {
       return res.status(400).json({
-        error: 'Liitä FACEIT-profiilisi ennen joukkueen luomista.',
+        error: "Liitä FACEIT-profiilisi ennen joukkueen luomista.",
       });
     }
 
@@ -627,8 +873,8 @@ apiRouter.post('/teams', authMiddleware, async (req, res) => {
               userId,
               faceitProfileId: faceitProfile.id,
               slotNumber: 1,
-              role: 'CAPTAIN',
-              status: 'ACTIVE',
+              role: "CAPTAIN",
+              status: "ACTIVE",
             },
           },
         },
@@ -654,52 +900,56 @@ apiRouter.post('/teams', authMiddleware, async (req, res) => {
 
     return res.status(201).json({ team });
   } catch (error: any) {
-    console.error('Failed to create team:', error);
+    console.error("Failed to create team:", error);
 
-    if (error?.code === 'P2002') {
+    if (error?.code === "P2002") {
       return res.status(409).json({
-        error: 'Samanniminen joukkue on jo olemassa.',
+        error: "Samanniminen joukkue on jo olemassa.",
       });
     }
 
     return res.status(500).json({
-      error: 'Joukkueen luominen epäonnistui. Yritä uudelleen.',
+      error: "Joukkueen luominen epäonnistui. Yritä uudelleen.",
     });
   }
 });
 
 // GET teams
-apiRouter.get('/teams', async (req, res) => {
+apiRouter.get("/teams", async (req, res) => {
   try {
     const teams = await prisma.team.findMany({
-      orderBy: { rankingPoints: 'desc' }
+      orderBy: { rankingPoints: "desc" },
     });
     res.json(teams);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch teams' });
+    res.status(500).json({ error: "Failed to fetch teams" });
   }
 });
 
 // ADMIN: Connect FACEIT
-apiRouter.post('/admin/tournaments/:id/connect-faceit', authMiddleware, async (req, res) => {
-  // In a real app, verify admin role here
-  const { id } = req.params;
-  const { faceitUrl } = req.body;
+apiRouter.post(
+  "/admin/tournaments/:id/connect-faceit",
+  authMiddleware,
+  async (req, res) => {
+    // In a real app, verify admin role here
+    const { id } = req.params;
+    const { faceitUrl } = req.body;
 
-  try {
-    const result = await faceitService.connectTournament(id, faceitUrl);
-    res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
+    try {
+      const result = await faceitService.connectTournament(id, faceitUrl);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
 
 // Webhook endpoint
-apiRouter.post('/webhooks/faceit', async (req, res) => {
+apiRouter.post("/webhooks/faceit", async (req, res) => {
   try {
     await faceitService.processWebhook(req.body);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: 'Webhook processing failed' });
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });

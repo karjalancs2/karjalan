@@ -11,6 +11,7 @@ import Rankings from "./pages/Rankings";
 import TeamFinder from "./pages/TeamFinder";
 import Profile from "./pages/Profile";
 import Teams from "./pages/Teams";
+import Team from "./pages/Team";
 import Watch from "./pages/Watch";
 import Auth from "./pages/Auth";
 import LinkFaceitTeam from "./pages/LinkFaceitTeam";
@@ -32,6 +33,7 @@ export default function App() {
               />
               <Route path="/rankings" element={<Rankings />} />
               <Route path="/teams" element={<Teams />} />
+              <Route path="/teams/:id" element={<Team />} />
               <Route path="/players" element={<Rankings />} />
               <Route path="/teamfinder" element={<TeamFinder />} />
               <Route path="/watch" element={<Watch />} />
