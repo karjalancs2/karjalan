@@ -597,6 +597,77 @@ apiRouter.get('/rankings/teams', async (req, res) => {
   }
 });
 
+// CREATE team (Authenticated) — require a linked FACEIT profile first
+apiRouter.post('/teams', authMiddleware, async (req, res) => {
+  const userId = (req as any).user.id;
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+
+  if (!name) {
+    return res.status(400).json({ error: 'Joukkueen nimi vaaditaan.' });
+  }
+
+  try {
+    const faceitProfile = await prisma.faceitProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!faceitProfile) {
+      return res.status(400).json({
+        error: 'Liitä FACEIT-profiilisi ennen joukkueen luomista.',
+      });
+    }
+
+    const team = await prisma.$transaction(async (tx) => {
+      return tx.team.create({
+        data: {
+          name,
+          captainId: userId,
+          members: {
+            create: {
+              userId,
+              faceitProfileId: faceitProfile.id,
+              slotNumber: 1,
+              role: 'CAPTAIN',
+              status: 'ACTIVE',
+            },
+          },
+        },
+        include: {
+          captain: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              faceitProfile: true,
+            },
+          },
+          members: {
+            where: { slotNumber: 1 },
+            include: {
+              user: true,
+              faceitProfile: true,
+            },
+          },
+        },
+      });
+    });
+
+    return res.status(201).json({ team });
+  } catch (error: any) {
+    console.error('Failed to create team:', error);
+
+    if (error?.code === 'P2002') {
+      return res.status(409).json({
+        error: 'Samanniminen joukkue on jo olemassa.',
+      });
+    }
+
+    return res.status(500).json({
+      error: 'Joukkueen luominen epäonnistui. Yritä uudelleen.',
+    });
+  }
+});
+
 // GET teams
 apiRouter.get('/teams', async (req, res) => {
   try {
