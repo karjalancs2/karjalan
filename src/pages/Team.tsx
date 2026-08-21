@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Shield } from "lucide-react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { useAuth } from "../contexts/AuthContext";
+import { apiFetch } from "../lib/http";
 
 type FaceitProfile = {
   id: string;
@@ -70,7 +71,7 @@ export default function Team() {
 
     const loadTeam = async () => {
       try {
-        const response = await fetch(`/api/teams/${encodeURIComponent(id)}`);
+        const response = await apiFetch(`/api/teams/${encodeURIComponent(id)}`);
         const data = await response.json().catch(() => null);
 
         if (!response.ok) {
@@ -105,7 +106,7 @@ export default function Team() {
     const loadRequests = async () => {
       setRequestsLoading(true);
       try {
-        const response = await fetch(`/api/teams/${encodeURIComponent(id)}/join-requests`, {
+        const response = await apiFetch(`/api/teams/${encodeURIComponent(id)}/join-requests`, {
           credentials: "include",
         });
         const data = await response.json().catch(() => null);
@@ -142,7 +143,7 @@ export default function Team() {
 
     setJoinSubmitting(true);
     try {
-      const response = await fetch(`/api/teams/${encodeURIComponent(id)}/join-requests`, {
+      const response = await apiFetch(`/api/teams/${encodeURIComponent(id)}/join-requests`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -172,7 +173,7 @@ export default function Team() {
 
     setAcceptingRequestId(requestId);
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/teams/${encodeURIComponent(id)}/join-requests/${encodeURIComponent(requestId)}/accept`,
         {
           method: "POST",
@@ -186,8 +187,8 @@ export default function Team() {
       }
 
       const [teamResponse, requestsResponse] = await Promise.all([
-        fetch(`/api/teams/${encodeURIComponent(id)}`),
-        fetch(`/api/teams/${encodeURIComponent(id)}/join-requests`, { credentials: "include" }),
+        apiFetch(`/api/teams/${encodeURIComponent(id)}`),
+        apiFetch(`/api/teams/${encodeURIComponent(id)}/join-requests`, { credentials: "include" }),
       ]);
       const teamData = await teamResponse.json().catch(() => null);
       const requestsData = await requestsResponse.json().catch(() => null);

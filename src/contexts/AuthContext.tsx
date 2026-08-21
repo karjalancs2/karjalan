@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { apiFetch } from '../lib/http';
 
 export interface User {
   id: string;
@@ -28,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchMe = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      const res = await apiFetch('/api/auth/me', { credentials: 'include' });
       if (!res.ok) {
         setUser(null);
       } else {
@@ -49,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (userData: User) => setUser(userData);
   
   const logout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await apiFetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     setUser(null);
   };
 

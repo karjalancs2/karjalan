@@ -2,11 +2,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// NOTE: We are using SQLite here for instant zero-config compatibility in the AI Studio preview.
-// To switch to PostgreSQL for production as requested:
-// 1. Change provider = "sqlite" to provider = "postgresql"
-// 2. Change your DATABASE_URL in .env to a postgres connection string
-// 3. Run: npx prisma migrate dev
+// SQLite is used for local development. Prisma does not support an env-driven
+// provider, so switch this one value to "postgresql" for production and run
+// the PostgreSQL migration workflow documented in DEPLOYMENT.md.
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")

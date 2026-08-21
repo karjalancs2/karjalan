@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "../contexts/TranslationContext";
 import { useAuth } from "../contexts/AuthContext";
 import { KarjalanMark } from "../components/KarjalanMark";
+import { apiFetch } from "../lib/http";
 
 export default function Auth() {
   const { t, language } = useTranslation();
@@ -26,9 +27,10 @@ export default function Auth() {
       : { email, password };
 
     try {
-      const res = await fetch(endpoint, {
+      const res = await apiFetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       const data = await res.json();

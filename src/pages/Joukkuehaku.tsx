@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Users } from "lucide-react";
 import { useTranslation } from "../contexts/TranslationContext";
+import { apiFetch } from "../lib/http";
 
 type FaceitProfile = {
   username: string;
@@ -30,7 +31,7 @@ export default function Joukkuehaku() {
   useEffect(() => {
     const loadTeams = async () => {
       try {
-        const response = await fetch("/api/teams");
+        const response = await apiFetch("/api/teams");
         const data = await response.json().catch(() => null);
         if (!response.ok) {
           throw new Error(data?.error || "Failed to fetch teams");
