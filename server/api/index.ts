@@ -983,6 +983,140 @@ apiRouter.post('/teams/:id/join-requests', authMiddleware, async (req, res) => {
   }
 });
 
+// GET pending team join requests (Authenticated, captain only)
+apiRouter.get('/teams/:id/join-requests', authMiddleware, async (req, res) => {
+  const userId = (req as any).user.id;
+  const teamId = req.params.id;
+
+  try {
+    const captainMembership = await prisma.teamMember.findFirst({
+      where: { teamId, userId, role: 'CAPTAIN', status: 'ACTIVE' },
+      select: { teamId: true },
+    });
+
+    if (!captainMembership) {
+      return res.status(403).json({ error: 'Vain joukkueen kapteeni voi nähdä pyynnöt.' });
+    }
+
+    const requests = await prisma.joinRequest.findMany({
+      where: { teamId, status: 'PENDING' },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            faceitProfile: true,
+          },
+        },
+      },
+    });
+
+    return res.json({ requests });
+  } catch (error) {
+    console.error('Failed to fetch team join requests:', error);
+    return res.status(500).json({
+      error: 'Liittymispyyntöjen haku epäonnistui.',
+    });
+  }
+});
+
+// ACCEPT a team join request (Authenticated, captain only)
+apiRouter.post('/teams/:id/join-requests/:requestId/accept', authMiddleware, async (req, res) => {
+  const userId = (req as any).user.id;
+  const teamId = req.params.id;
+  const requestId = req.params.requestId;
+
+  try {
+    const captainMembership = await prisma.teamMember.findFirst({
+      where: { teamId, userId, role: 'CAPTAIN', status: 'ACTIVE' },
+      select: { teamId: true },
+    });
+
+    if (!captainMembership) {
+      return res.status(403).json({ error: 'Vain joukkueen kapteeni voi hyväksyä pyyntöjä.' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const request = await tx.joinRequest.findUnique({
+        where: { id: requestId },
+        include: { user: { include: { faceitProfile: true } } },
+      });
+
+      if (!request || request.teamId !== teamId) {
+        throw new Error('JOIN_REQUEST_NOT_FOUND');
+      }
+
+      if (request.status !== 'PENDING') {
+        throw new Error('JOIN_REQUEST_NOT_PENDING');
+      }
+
+      if (!request.user.faceitProfile) {
+        throw new Error('FACEIT_PROFILE_NOT_FOUND');
+      }
+
+      const activeMembers = await tx.teamMember.findMany({
+        where: { teamId, status: 'ACTIVE' },
+        select: { slotNumber: true },
+      });
+
+      if (activeMembers.length >= 5) {
+        throw new Error('TEAM_FULL');
+      }
+
+      const occupiedSlots = new Set(activeMembers.map((member) => member.slotNumber));
+      const slotNumber = [1, 2, 3, 4, 5].find((slot) => !occupiedSlots.has(slot));
+
+      if (!slotNumber) {
+        throw new Error('TEAM_FULL');
+      }
+
+      const member = await tx.teamMember.create({
+        data: {
+          teamId,
+          userId: request.userId,
+          faceitProfileId: request.user.faceitProfile.id,
+          slotNumber,
+          role: 'PLAYER',
+          status: 'ACTIVE',
+        },
+        include: { user: true, faceitProfile: true },
+      });
+
+      await tx.joinRequest.update({
+        where: { id: requestId },
+        data: { status: 'ACCEPTED' },
+      });
+
+      return member;
+    });
+
+    return res.json({ member: result });
+  } catch (error: any) {
+    console.error('Failed to accept team join request:', error);
+
+    const errors: Record<string, { status: number; message: string }> = {
+      JOIN_REQUEST_NOT_FOUND: { status: 404, message: 'Liittymispyyntöä ei löytynyt.' },
+      JOIN_REQUEST_NOT_PENDING: { status: 400, message: 'Liittymispyyntö on jo käsitelty.' },
+      FACEIT_PROFILE_NOT_FOUND: { status: 400, message: 'Hakijalla ei ole liitettyä FACEIT-profiilia.' },
+      TEAM_FULL: { status: 400, message: 'Joukkue on täynnä.' },
+    };
+    const knownError = errors[error?.message];
+
+    if (knownError) {
+      return res.status(knownError.status).json({ error: knownError.message });
+    }
+
+    if (error?.code === 'P2002') {
+      return res.status(400).json({ error: 'Pelaaja on jo joukkueen jäsen.' });
+    }
+
+    return res.status(500).json({
+      error: 'Liittymispyynnön hyväksyminen epäonnistui.',
+    });
+  }
+});
+
 // GET teams
 apiRouter.get("/teams", async (req, res) => {
   try {
