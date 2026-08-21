@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// NOTE: We are using SQLite here for instant zero-config compatibility in the AI Studio preview.
+// To switch to PostgreSQL for production as requested:
+// 1. Change provider = "sqlite" to provider = "postgresql"
+// 2. Change your DATABASE_URL in .env to a postgres connection string
+// 3. Run: npx prisma migrate dev
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String       @id @default(uuid())
+  username        String       @unique
+  email           String       @unique
+  passwordHash    String
+  role            String       @default("USER") // USER, TEAM_CAPTAIN, ADMIN
+  country         String       @default("FI")
+  faceitLevel     Int?
+  faceitUsername  String?
+  faceitId        String?
+  faceitAvatar    String?
+  faceitElo       Int?
+  faceitVerifiedAt DateTime?
+  inGameRole      String?
+  
+  teamsCaptained  Team[]       @relation("TeamCaptain")
+  teamMemberships TeamMember[]
+  lobbiesCaptained Lobby[]     @relation("LobbyCaptain")
+  lobbySlots      LobbySlot[]
+  lobbyRequests   LobbyRequest[]
+  lobbyMessages   LobbyChatMessage[]
+  notifications   Notification[]
+  lobbyMembers    LobbyMember[]
+  faceitProfile   FaceitProfile?
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model Team {
+  id            String       @id @default(uuid())
+  name          String
+  logo          String?
+  captainId     String
+  rankingPoints Int          @default(1000)
+  
+  captain       User         @relation("TeamCaptain", fields: [captainId], references: [id])
+  members       TeamMember[]
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model TeamMember {
+  teamId String
+  userId String
+  team   Team @relation(fields: [teamId], references: [id])
+  user   User @relation(fields: [userId], references: [id])
+  
+  @@id([teamId, userId])
+}
+
+model Tournament {
+  id            String    @id @default(uuid())
+  name          String
+  status        String    @default("upcoming")
+  date          DateTime?
+  prizePool     Int       @default(0)
+  teamCapacity  Int       @default(64)
+  entryFee      Int       @default(0)
+  format        String    @default("Single Elimination")
+  registrationDeadline DateTime?
+  faceitId      String?
+  
+  lobbies       Lobby[]
+  matches       Match[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Lobby {
+  id            String      @id @default(uuid())
+  tournamentId  String
+  name          String
+  captainId     String
+  status        String      @default("forming")
+  description   String?
+  
+  tournament    Tournament  @relation(fields: [tournamentId], references: [id])
+  captain       User        @relation("LobbyCaptain", fields: [captainId], references: [id])
+  slots         LobbySlot[]
+  requests      LobbyRequest[]
+  chatMessages  LobbyChatMessage[]
+  members       LobbyMember[]
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model LobbySlot {
+  id            String  @id @default(uuid())
+  lobbyId       String
+  userId        String?
+  status        String  @default("empty") // empty, occupied
+  requestedRole String?
+  minFaceitLevel Int?
+  slotIndex     Int
+  
+  lobby         Lobby   @relation(fields: [lobbyId], references: [id])
+  user          User?   @relation(fields: [userId], references: [id])
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model LobbyMember {
+  id              String        @id @default(uuid())
+  lobbyId         String
+  userId          String
+  faceitProfileId String?
+  slotIndex       Int
+  role            String?       // CAPTAIN, MEMBER
+  status          String        @default("active")
+  joinedAt        DateTime      @default(now())
+
+  lobby           Lobby         @relation(fields: [lobbyId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
+  faceitProfile   FaceitProfile? @relation(fields: [faceitProfileId], references: [id])
+
+  @@unique([lobbyId, slotIndex])
+}
+
+model LobbyRequest {
+  id         String   @id @default(uuid())
+  lobbyId    String
+  userId     String
+  slotId     String?
+  status     String   @default("pending") // pending, accepted, rejected
+  message    String?
+
+  lobby      Lobby    @relation(fields: [lobbyId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model LobbyChatMessage {
+  id        String   @id @default(uuid())
+  lobbyId   String
+  userId    String
+  content   String
+
+  lobby     Lobby    @relation(fields: [lobbyId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id             String   @id @default(uuid())
+  recipientId    String
+  type           String
+  title          String
+  message        String
+  lobbyId        String?
+  joinRequestId  String?
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  recipient      User     @relation(fields: [recipientId], references: [id])
+}
+
+model FaceitProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  playerId      String
+  username      String
+  avatar        String?
+  elo           Int?
+  level         Int?
+  profileUrl    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id])
+  lobbyMembers  LobbyMember[]
+}
+
+model Match {
+  id            String    @id @default(uuid())
+  tournamentId  String
+  team1Id       String?
+  team2Id       String?
+  team1Score    Int       @default(0)
+  team2Score    Int       @default(0)
+  round         String?
+  status        String    @default("upcoming")
+  faceitId      String?   @unique
+  scheduledTime DateTime?
+  
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
