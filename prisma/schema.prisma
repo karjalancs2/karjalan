@@ -6,7 +6,7 @@ generator client {
 // provider, so switch this one value to "postgresql" for production and run
 // the PostgreSQL migration workflow documented in DEPLOYMENT.md.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
