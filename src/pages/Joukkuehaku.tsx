@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Users } from "lucide-react";
 import { useTranslation } from "../contexts/TranslationContext";
+import { faceitTierClass } from "../lib/utils";
 import { apiFetch } from "../lib/http";
 
 type FaceitProfile = {
@@ -103,14 +104,18 @@ export default function Joukkuehaku() {
                 <div className="flex items-start justify-between gap-4 mb-8">
                   <div>
                     <p className="text-xs uppercase tracking-widest text-neutral-500 mb-2">
-                      {language === "fi" ? "Etsii pelaajia" : "Looking for players"}
+                      {language === "fi"
+                        ? "Etsii pelaajia"
+                        : "Looking for players"}
                     </p>
                     <h2 className="text-2xl font-bold uppercase tracking-tight">
                       {team.name}
                     </h2>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-xl font-bold">{team.members.length} / 5</div>
+                    <div className="text-xl font-bold">
+                      {team.members.length} / 5
+                    </div>
                     <div className="text-xs text-neutral-500">Pelaajaa</div>
                   </div>
                 </div>
@@ -124,16 +129,22 @@ export default function Joukkuehaku() {
                     />
                   ) : (
                     <div className="w-11 h-11 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center font-bold">
-                      {(profile?.username || team.captain.username).charAt(0).toUpperCase()}
+                      {(profile?.username || team.captain.username)
+                        .charAt(0)
+                        .toUpperCase()}
                     </div>
                   )}
                   <div>
                     <p className="text-xs uppercase tracking-wider text-neutral-500">
-                      {language === "fi" ? "Kapteenin FACEIT" : "Captain FACEIT"}
+                      {language === "fi"
+                        ? "Kapteenin FACEIT"
+                        : "Captain FACEIT"}
                     </p>
                     <p className="font-bold">
                       {profile?.username || team.captain.username}
-                      <span className="text-neutral-400 font-normal ml-2">
+                      <span
+                        className={`${faceitTierClass(profile?.level, profile?.elo)} font-normal ml-2`}
+                      >
                         ELO {profile?.elo ?? "-"}
                       </span>
                     </p>

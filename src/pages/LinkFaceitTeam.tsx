@@ -1,16 +1,25 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "../contexts/TranslationContext";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function LinkFaceitTeam() {
   const { id } = useParams<{ id: string }>();
   const { language } = useTranslation();
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const [faceitUrl, setFaceitUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
+
+    if (loading) return;
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const trimmed = faceitUrl.trim();

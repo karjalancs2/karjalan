@@ -1,5 +1,5 @@
-﻿import { prisma } from '../../database/prisma';
-import { rankingService } from '../../services/rankingService';
+﻿import { prisma } from "../../database/prisma";
+import { rankingService } from "../../services/rankingService";
 
 /**
  * FACEIT Service Abstraction
@@ -11,7 +11,8 @@ export class FaceitService {
 
   constructor() {
     // Determine mock mode from environment
-    this.isMockMode = process.env.FACEIT_MOCK_MODE === 'true' || !process.env.FACEIT_API_KEY;
+    this.isMockMode =
+      process.env.FACEIT_MOCK_MODE === "true" || !process.env.FACEIT_API_KEY;
     this.apiKey = process.env.FACEIT_API_KEY;
   }
 
@@ -20,35 +21,47 @@ export class FaceitService {
    */
   async connectTournament(localTournamentId: string, faceitUrl: string) {
     // Extract tournament ID or Championship ID from URL
-    const faceitIdMatch = faceitUrl.match(/championship\/([a-zA-Z0-9-]+)/) || faceitUrl.match(/tournament\/([a-zA-Z0-9-]+)/);
-    const faceitId = faceitIdMatch ? faceitIdMatch[1] : 'mock-faceit-id-12345';
+    const faceitIdMatch =
+      faceitUrl.match(/championship\/([a-zA-Z0-9-]+)/) ||
+      faceitUrl.match(/tournament\/([a-zA-Z0-9-]+)/);
+    const faceitId = faceitIdMatch ? faceitIdMatch[1] : "mock-faceit-id-12345";
 
     if (this.isMockMode) {
-      console.log(`[FACEIT MOCK] Connecting tournament ${localTournamentId} to Faceit ID ${faceitId}`);
+      console.log(
+        `[FACEIT MOCK] Connecting tournament ${localTournamentId} to Faceit ID ${faceitId}`,
+      );
       await prisma.tournament.update({
         where: { id: localTournamentId },
-        data: { faceitId }
+        data: { faceitId },
       });
-      return { success: true, faceitId, mode: 'MOCK', name: 'Mock Faceit Championship' };
+      return {
+        success: true,
+        faceitId,
+        mode: "MOCK",
+        name: "Mock Faceit Championship",
+      };
     }
 
     try {
       // PRODUCTION MODE
-      const res = await fetch(`https://open.faceit.com/data/v4/championships/${faceitId}`, {
-        headers: { 'Authorization': 'Bearer ' + (this.apiKey || '') }
-      });
-      
-      if (!res.ok) throw new Error('Failed to fetch from FACEIT API');
+      const res = await fetch(
+        `https://open.faceit.com/data/v4/championships/${faceitId}`,
+        {
+          headers: { Authorization: "Bearer " + (this.apiKey || "") },
+        },
+      );
+
+      if (!res.ok) throw new Error("Failed to fetch from FACEIT API");
       const data = await res.json();
-      
+
       await prisma.tournament.update({
         where: { id: localTournamentId },
-        data: { faceitId }
+        data: { faceitId },
       });
 
-      return { success: true, faceitId, mode: 'PRODUCTION', name: data.name };
+      return { success: true, faceitId, mode: "PRODUCTION", name: data.name };
     } catch (error: any) {
-      console.error('[FACEIT PROD] Error connecting:', error);
+      console.error("[FACEIT PROD] Error connecting:", error);
       throw new Error(error.message);
     }
   }
@@ -60,13 +73,13 @@ export class FaceitService {
     // 1. Authenticate webhook (verify signatures if required in prod)
     // 2. Identify event type
     const event = payload.event;
-    
+
     console.log(`[FACEIT WEBHOOK] Received event: ${event}`);
 
-    if (event === 'match_status_finished') {
+    if (event === "match_status_finished") {
       const matchData = payload.payload;
       const faceitMatchId = matchData.id;
-      
+
       try {
         // Extract scores from webhook payload (depending on FACEIT exact structure)
         // Usually nested in results array
@@ -76,21 +89,24 @@ export class FaceitService {
         // Update match in our DB
         const match = await prisma.match.update({
           where: { faceitId: faceitMatchId },
-          data: { 
-            status: 'completed',
+          data: {
+            status: "completed",
             team1Score: team1Score,
-            team2Score: team2Score
-          }
+            team2Score: team2Score,
+          },
         });
 
         // Automatically trigger ranking point calculation!
-        await rankingService.processMatchResult(match.id, team1Score, team2Score);
-
+        await rankingService.processMatchResult(
+          match.id,
+          team1Score,
+          team2Score,
+        );
       } catch (err) {
-        console.error('Failed to process match finish webhook:', err);
+        console.error("Failed to process match finish webhook:", err);
       }
     }
-    
+
     return { success: true };
   }
 
@@ -99,44 +115,58 @@ export class FaceitService {
    */
   async getPlayerProfile(identifier: string) {
     // Accept either full URL or username; extract username if URL provided
-    const urlMatch = identifier.match(/faceit\.com\/(?:\w{2}\/)?players\/(.+)$/i);
+    const urlMatch = identifier.match(
+      /faceit\.com\/(?:\w{2}\/)?players\/(.+)$/i,
+    );
     const nickname = urlMatch ? decodeURIComponent(urlMatch[1]) : identifier;
 
     if (this.isMockMode) {
       // Return a mock profile in dev mode
       return {
         success: true,
-        mode: 'MOCK',
+        mode: "MOCK",
         playerId: `mock-${nickname}`,
         nickname,
         avatar: null,
         elo: 1200,
         level: 5,
-        profileUrl: `https://www.faceit.com/en/players/${nickname}`
+        profileUrl: `https://www.faceit.com/en/players/${nickname}`,
       };
     }
 
     try {
       // Use the FACEIT players endpoint. The API supports fetching by nickname.
-      const res = await fetch(`https://open.faceit.com/data/v4/players?nickname=${encodeURIComponent(nickname)}`, {
-        headers: { 'Authorization': 'Bearer ' + (this.apiKey || '') }
-      });
-      if (!res.ok) throw new Error('Failed to fetch FACEIT player');
+      const res = await fetch(
+        `https://open.faceit.com/data/v4/players?nickname=${encodeURIComponent(nickname)}`,
+        {
+          headers: { Authorization: "Bearer " + (this.apiKey || "") },
+        },
+      );
+      if (!res.ok) throw new Error("Failed to fetch FACEIT player");
       const data = await res.json();
 
       return {
         success: true,
-        mode: 'PRODUCTION',
+        mode: "PRODUCTION",
         playerId: data.player_id || data.playerId || data.guid || null,
         nickname: data.nickname || data.player_name || nickname,
         avatar: data.avatar || data.faceit_avatars?.[0] || null,
-        elo: data.games?.cs2?.faceit_elo || data.elo || null,
-        level: data.games?.cs2?.faceit_level || data.faceit_elo || null,
-        profileUrl: data.profile_url || `https://www.faceit.com/en/players/${nickname}`
+        elo:
+          data.games?.cs2?.faceit_elo ||
+          data.games?.csgo?.faceit_elo ||
+          data.elo ||
+          null,
+        level:
+          data.games?.cs2?.skill_level ||
+          data.games?.csgo?.skill_level ||
+          data.skill_level ||
+          null,
+        profileUrl:
+          data.profile_url || `https://www.faceit.com/en/players/${nickname}`,
       };
     } catch (error: any) {
-      console.error('[FACEIT PROD] Error fetching player profile:', error);
-      throw new Error('FACEIT profile could not be verified');
+      console.error("[FACEIT PROD] Error fetching player profile:", error);
+      throw new Error("FACEIT profile could not be verified");
     }
   }
 }

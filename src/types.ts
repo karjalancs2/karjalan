@@ -1,4 +1,4 @@
-export type Language = 'fi' | 'en';
+export type Language = "fi" | "en";
 
 export interface User {
   id: string;
@@ -6,8 +6,10 @@ export interface User {
   avatar?: string;
   country: string; // 'FI', etc.
   faceitLevel?: number;
+  faceitElo?: number;
+  faceitAvatar?: string;
   faceitUsername?: string;
-  role?: 'AWPer' | 'Rifler' | 'Entry' | 'Support' | 'IGL';
+  role?: "AWPer" | "Rifler" | "Entry" | "Support" | "IGL";
   teamId?: string;
 }
 
@@ -28,7 +30,7 @@ export interface Tournament {
   id: string;
   name: string;
   logo?: string;
-  status: 'upcoming' | 'registration' | 'live' | 'completed';
+  status: "upcoming" | "registration" | "live" | "completed";
   date: string;
   prizePool: number;
   teamCapacity: number;
@@ -47,7 +49,7 @@ export interface Match {
   team1Score: number;
   team2Score: number;
   map: string;
-  status: 'upcoming' | 'live' | 'completed';
+  status: "upcoming" | "live" | "completed";
   scheduledTime: string;
   streamUrl?: string;
   faceitMatchId?: string; // Links to the FACEIT platform
@@ -58,7 +60,7 @@ export interface TeamLobbySlot {
   playerId?: string;
   requestedRole?: string;
   minFaceitLevel?: number;
-  status: 'empty' | 'pending' | 'occupied';
+  status: "empty" | "pending" | "occupied";
 }
 
 export interface TeamLobby {
@@ -71,7 +73,7 @@ export interface TeamLobby {
   // Optional authoritative members returned by the backend (LobbyMember records).
   // Each member should include userId, user (optional), faceitProfile (optional), slotIndex, role, status, etc.
   members?: any[];
-  status: 'forming' | 'ready' | 'registered';
+  status: "forming" | "ready" | "registered";
   description?: string;
 }
 

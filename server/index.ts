@@ -13,10 +13,20 @@ async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
 
-  const allowedOrigins = (process.env.CORS_ORIGIN || "")
+  const configuredOrigins = (process.env.CORS_ORIGIN || "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const allowedOrigins =
+    process.env.NODE_ENV === "production"
+      ? configuredOrigins
+      : [
+          ...new Set([
+            ...configuredOrigins,
+            "http://localhost:5173",
+            "http://localhost:3000",
+          ]),
+        ];
 
   app.use(
     cors({

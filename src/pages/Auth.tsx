@@ -84,7 +84,9 @@ export default function Auth() {
           )}
           <input
             type="email"
-            placeholder={language === "fi" ? "Sähköpostiosoite" : "Email address"}
+            placeholder={
+              language === "fi" ? "Sähköpostiosoite" : "Email address"
+            }
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="bg-neutral-950 border border-neutral-800 px-4 py-3 rounded text-white focus:outline-none focus:border-neutral-500"

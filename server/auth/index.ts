@@ -63,16 +63,14 @@ authRouter.post("/register", async (req, res) => {
     );
     res.cookie("token", token, cookieOptions);
 
-    res
-      .status(201)
-      .json({
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-        },
-      });
+    res.status(201).json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (error: any) {
     // Prisma unique constraint violation code
     if (error.code === "P2002") {

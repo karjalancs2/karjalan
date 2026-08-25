@@ -1,5 +1,11 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiFetch } from '../lib/http';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { apiFetch } from "../lib/http";
 
 export interface User {
   id: string;
@@ -29,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchMe = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch('/api/auth/me', { credentials: 'include' });
+      const res = await apiFetch("/api/auth/me", { credentials: "include" });
       if (!res.ok) {
         setUser(null);
       } else {
@@ -48,14 +54,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (userData: User) => setUser(userData);
-  
+
   const logout = async () => {
-    await apiFetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    await apiFetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser: fetchMe }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, logout, refreshUser: fetchMe }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -64,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

@@ -5,7 +5,84 @@ import { faceitService } from "../integrations/faceit/faceitService";
 
 export const apiRouter = Router();
 
+async function refreshFaceitStatsIfMissing(user: any) {
+  const profile = user.faceitProfile;
+  const hasStats =
+    (profile?.level ?? user.faceitLevel) != null &&
+    (profile?.elo ?? user.faceitElo) != null &&
+    (profile?.avatar || user.faceitAvatar);
+  if (hasStats || !user.faceitUsername) return;
+
+  try {
+    const refreshed = await faceitService.getPlayerProfile(user.faceitUsername);
+    if (!refreshed.playerId) return;
+
+    await prisma.faceitProfile.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        playerId: refreshed.playerId,
+        username: refreshed.nickname,
+        avatar: refreshed.avatar,
+        elo: refreshed.elo == null ? null : Math.floor(refreshed.elo),
+        level: refreshed.level == null ? null : Number(refreshed.level),
+        profileUrl: refreshed.profileUrl || null,
+      },
+      update: {
+        playerId: refreshed.playerId,
+        username: refreshed.nickname,
+        avatar: refreshed.avatar,
+        elo: refreshed.elo == null ? null : Math.floor(refreshed.elo),
+        level: refreshed.level == null ? null : Number(refreshed.level),
+        profileUrl: refreshed.profileUrl || null,
+      },
+    });
+    const userStats = {
+      faceitId: refreshed.playerId,
+      faceitUsername: refreshed.nickname,
+      faceitAvatar: refreshed.avatar,
+      faceitElo: refreshed.elo == null ? null : Math.floor(refreshed.elo),
+      faceitLevel: refreshed.level == null ? null : Number(refreshed.level),
+      faceitVerifiedAt: new Date(),
+    };
+    await prisma.user.update({
+      where: { id: user.id },
+      data: userStats,
+    });
+    Object.assign(user, userStats);
+    if (user.faceitProfile)
+      Object.assign(user.faceitProfile, {
+        avatar: refreshed.avatar,
+        elo: userStats.faceitElo,
+        level: userStats.faceitLevel,
+        username: refreshed.nickname,
+      });
+  } catch (error) {
+    console.error("Failed to refresh FACEIT stats:", error);
+  }
+}
+
+async function refreshFaceitStatsForUsers(users: any[]) {
+  await Promise.all(users.map((user) => refreshFaceitStatsIfMissing(user)));
+}
+
 apiRouter.use("/auth", authRouter);
+
+apiRouter.get("/users/:id", async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      include: { faceitProfile: true },
+    });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    await refreshFaceitStatsIfMissing(user);
+    return res.json({ user });
+  } catch (error) {
+    console.error("Failed to fetch user:", error);
+    return res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
 
 // Link and verify FACEIT profile for authenticated user
 apiRouter.post("/auth/faceit/link", authMiddleware, async (req, res) => {
@@ -112,6 +189,7 @@ apiRouter.get("/lobbies", async (req, res) => {
               faceitUsername: true,
               faceitAvatar: true,
               faceitElo: true,
+              faceitLevel: true,
               faceitVerifiedAt: true,
               role: true,
               country: true,
@@ -129,10 +207,18 @@ apiRouter.get("/lobbies", async (req, res) => {
           faceitId: true,
           faceitUsername: true,
           faceitAvatar: true,
+          faceitElo: true,
+          faceitLevel: true,
         },
       },
     },
   });
+  await refreshFaceitStatsForUsers([
+    ...lobbies.flatMap((lobby) => lobby.members.map((member) => member.user)),
+    ...lobbies.flatMap((lobby) =>
+      lobby.slots.flatMap((slot) => (slot.user ? [slot.user] : [])),
+    ),
+  ]);
   res.json(lobbies);
 });
 
@@ -159,6 +245,7 @@ apiRouter.get("/lobbies/:id", async (req, res) => {
                 faceitUsername: true,
                 faceitAvatar: true,
                 faceitElo: true,
+                faceitLevel: true,
                 faceitVerifiedAt: true,
                 role: true,
                 country: true,
@@ -175,12 +262,18 @@ apiRouter.get("/lobbies/:id", async (req, res) => {
             faceitId: true,
             faceitUsername: true,
             faceitAvatar: true,
+            faceitElo: true,
+            faceitLevel: true,
           },
         },
         requests: { include: { user: true } },
       },
     });
     if (!lobby) return res.status(404).json({ error: "Lobby not found" });
+    await refreshFaceitStatsForUsers([
+      ...lobby.members.map((member) => member.user),
+      ...lobby.slots.flatMap((slot) => (slot.user ? [slot.user] : [])),
+    ]);
     res.json(lobby);
   } catch (err) {
     console.error("Failed to fetch lobby:", err);
@@ -419,9 +512,9 @@ apiRouter.post("/lobbies/:id/requests", authMiddleware, async (req, res) => {
       await prisma.notification.create({
         data: {
           recipientId: userId,
-          type: "request_sent",
+          type: "join_request_received",
           title: "Liittymispyyntö lähetetty",
-          message: `Liittymispyyntö joukkueeseen ${lobbyCaptain?.name || ""} lähetetty.`,
+          message: "Liittymispyyntösi on lähetetty joukkueen kapteenille.",
           lobbyId: id,
           joinRequestId: reqRec.id,
         },
@@ -526,6 +619,7 @@ apiRouter.post(
                 avatar: reqUser.faceitAvatar || null,
                 elo: reqUser.faceitElo || null,
                 level: reqUser.faceitLevel || null,
+                profileUrl: null,
               },
             });
           }
@@ -806,9 +900,9 @@ apiRouter.get("/rankings/teams", async (req, res) => {
 });
 
 // CREATE team (Authenticated) — require a linked FACEIT profile first
-apiRouter.get('/teams/:id', async (req, res) => {
+apiRouter.get("/teams/:id", async (req, res) => {
   try {
-    const team = await prisma.team.findUnique({
+    const team: any = await prisma.team.findUnique({
       where: { id: req.params.id },
       include: {
         captain: {
@@ -818,13 +912,17 @@ apiRouter.get('/teams/:id', async (req, res) => {
           },
         },
         members: {
-          orderBy: { slotNumber: 'asc' },
+          orderBy: { slotNumber: "asc" },
           include: {
             faceitProfile: true,
             user: {
               select: {
                 id: true,
                 username: true,
+                faceitLevel: true,
+                faceitElo: true,
+                faceitAvatar: true,
+                faceitUsername: true,
               },
             },
           },
@@ -833,14 +931,16 @@ apiRouter.get('/teams/:id', async (req, res) => {
     });
 
     if (!team) {
-      return res.status(404).json({ error: 'Joukkuetta ei löytynyt.' });
+      return res.status(404).json({ error: "Joukkuetta ei löytynyt." });
     }
+
+    await refreshFaceitStatsForUsers(team.members.map((member) => member.user));
 
     return res.json({ team });
   } catch (error) {
-    console.error('Failed to fetch team:', error);
+    console.error("Failed to fetch team:", error);
     return res.status(500).json({
-      error: 'Joukkueen tietojen haku epäonnistui.',
+      error: "Joukkueen tietojen haku epäonnistui.",
     });
   }
 });
@@ -916,10 +1016,10 @@ apiRouter.post("/teams", authMiddleware, async (req, res) => {
 });
 
 // GET teams looking for players
-apiRouter.get('/teams', async (_req, res) => {
+apiRouter.get("/teams", async (_req, res) => {
   try {
-    const teams = await prisma.team.findMany({
-      orderBy: { createdAt: 'desc' },
+    const teams: any[] = await prisma.team.findMany({
+      orderBy: { createdAt: "desc" },
       include: {
         captain: {
           select: {
@@ -929,10 +1029,20 @@ apiRouter.get('/teams', async (_req, res) => {
           },
         },
         members: {
-          where: { status: 'ACTIVE' },
-          orderBy: { slotNumber: 'asc' },
+          where: { status: "ACTIVE" },
+          orderBy: { slotNumber: "asc" },
           include: {
             faceitProfile: true,
+            user: {
+              select: {
+                id: true,
+                username: true,
+                faceitLevel: true,
+                faceitElo: true,
+                faceitAvatar: true,
+                faceitUsername: true,
+              },
+            },
           },
         },
       },
@@ -940,15 +1050,15 @@ apiRouter.get('/teams', async (_req, res) => {
 
     return res.json(teams.filter((team) => team.members.length < 5));
   } catch (error) {
-    console.error('Failed to fetch teams looking for players:', error);
+    console.error("Failed to fetch teams looking for players:", error);
     return res.status(500).json({
-      error: 'Joukkueiden haku epäonnistui.',
+      error: "Joukkueiden haku epäonnistui.",
     });
   }
 });
 
 // CREATE a team join request (Authenticated)
-apiRouter.post('/teams/:id/join-requests', authMiddleware, async (req, res) => {
+apiRouter.post("/teams/:id/join-requests", authMiddleware, async (req, res) => {
   const userId = (req as any).user.id;
   const teamId = req.params.id;
 
@@ -958,7 +1068,7 @@ apiRouter.post('/teams/:id/join-requests', authMiddleware, async (req, res) => {
     });
 
     if (!faceitProfile) {
-      return res.status(400).json({ error: 'Liitä FACEIT-profiilisi ensin.' });
+      return res.status(400).json({ error: "Liitä FACEIT-profiilisi ensin." });
     }
 
     const team = await prisma.team.findUnique({
@@ -967,7 +1077,7 @@ apiRouter.post('/teams/:id/join-requests', authMiddleware, async (req, res) => {
     });
 
     if (!team) {
-      return res.status(404).json({ error: 'Joukkuetta ei löytynyt.' });
+      return res.status(404).json({ error: "Joukkuetta ei löytynyt." });
     }
 
     const existingMembership = await prisma.teamMember.findUnique({
@@ -978,62 +1088,68 @@ apiRouter.post('/teams/:id/join-requests', authMiddleware, async (req, res) => {
     });
 
     if (existingMembership) {
-      return res.status(400).json({ error: 'Olet jo tämän joukkueen jäsen.' });
+      return res.status(400).json({ error: "Olet jo tämän joukkueen jäsen." });
     }
 
     const activeMemberCount = await prisma.teamMember.count({
-      where: { teamId, status: 'ACTIVE' },
+      where: { teamId, status: "ACTIVE" },
     });
 
     if (activeMemberCount >= 5) {
-      return res.status(400).json({ error: 'Joukkue on täynnä.' });
+      return res.status(400).json({ error: "Joukkue on täynnä." });
     }
 
     const pendingRequest = await prisma.joinRequest.findFirst({
-      where: { teamId, userId, status: 'PENDING' },
+      where: { teamId, userId, status: "PENDING" },
       select: { id: true },
     });
 
     if (pendingRequest) {
-      return res.status(400).json({ error: 'Liittymispyyntösi on jo lähetetty.' });
+      return res
+        .status(400)
+        .json({ error: "Liittymispyyntösi on jo lähetetty." });
     }
 
     const joinRequest = await prisma.joinRequest.create({
-      data: { teamId, userId, status: 'PENDING' },
+      data: { teamId, userId, status: "PENDING" },
     });
 
     return res.status(201).json({ joinRequest });
   } catch (error: any) {
-    console.error('Failed to create team join request:', error);
+    console.error("Failed to create team join request:", error);
 
-    if (error?.code === 'P2002') {
-      return res.status(400).json({ error: 'Liittymispyyntösi on jo lähetetty.' });
+    if (error?.code === "P2002") {
+      return res
+        .status(400)
+        .json({ error: "Liittymispyyntösi on jo lähetetty." });
     }
 
     return res.status(500).json({
-      error: 'Liittymispyynnön lähettäminen epäonnistui.',
+      error: "Liittymispyynnön lähettäminen epäonnistui.",
     });
   }
 });
 
 // GET pending team join requests (Authenticated, captain only)
-apiRouter.get('/teams/:id/join-requests', authMiddleware, async (req, res) => {
+apiRouter.get("/teams/:id/join-requests", authMiddleware, async (req, res) => {
   const userId = (req as any).user.id;
   const teamId = req.params.id;
 
   try {
     const captainMembership = await prisma.teamMember.findFirst({
-      where: { teamId, userId, role: 'CAPTAIN', status: 'ACTIVE' },
+      where: { teamId, userId, role: "CAPTAIN", status: "ACTIVE" },
       select: { teamId: true },
     });
 
     if (!captainMembership) {
-      return res.status(403).json({ error: 'Vain joukkueen kapteeni voi nähdä pyynnöt.' });
+      return res
+        .status(403)
+        .json({ error: "Vain joukkueen kapteeni voi nähdä pyynnöt." });
     }
 
     const requests = await prisma.joinRequest.findMany({
-      where: { teamId, status: 'PENDING' },
-      orderBy: { createdAt: 'asc' },
+      where: { teamId, status: "PENDING" },
+      orderBy: { createdAt: "asc" },
       include: {
         user: {
           select: {
@@ -1047,108 +1163,131 @@ apiRouter.get('/teams/:id/join-requests', authMiddleware, async (req, res) => {
 
     return res.json({ requests });
   } catch (error) {
-    console.error('Failed to fetch team join requests:', error);
+    console.error("Failed to fetch team join requests:", error);
     return res.status(500).json({
-      error: 'Liittymispyyntöjen haku epäonnistui.',
+      error: "Liittymispyyntöjen haku epäonnistui.",
     });
   }
 });
 
 // ACCEPT a team join request (Authenticated, captain only)
-apiRouter.post('/teams/:id/join-requests/:requestId/accept', authMiddleware, async (req, res) => {
-  const userId = (req as any).user.id;
-  const teamId = req.params.id;
-  const requestId = req.params.requestId;
+apiRouter.post(
+  "/teams/:id/join-requests/:requestId/accept",
+  authMiddleware,
+  async (req, res) => {
+    const userId = (req as any).user.id;
+    const teamId = req.params.id;
+    const requestId = req.params.requestId;
 
-  try {
-    const captainMembership = await prisma.teamMember.findFirst({
-      where: { teamId, userId, role: 'CAPTAIN', status: 'ACTIVE' },
-      select: { teamId: true },
-    });
-
-    if (!captainMembership) {
-      return res.status(403).json({ error: 'Vain joukkueen kapteeni voi hyväksyä pyyntöjä.' });
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      const request = await tx.joinRequest.findUnique({
-        where: { id: requestId },
-        include: { user: { include: { faceitProfile: true } } },
+    try {
+      const captainMembership = await prisma.teamMember.findFirst({
+        where: { teamId, userId, role: "CAPTAIN", status: "ACTIVE" },
+        select: { teamId: true },
       });
 
-      if (!request || request.teamId !== teamId) {
-        throw new Error('JOIN_REQUEST_NOT_FOUND');
+      if (!captainMembership) {
+        return res
+          .status(403)
+          .json({ error: "Vain joukkueen kapteeni voi hyväksyä pyyntöjä." });
       }
 
-      if (request.status !== 'PENDING') {
-        throw new Error('JOIN_REQUEST_NOT_PENDING');
-      }
+      const result = await prisma.$transaction(async (tx) => {
+        const request = await tx.joinRequest.findUnique({
+          where: { id: requestId },
+          include: { user: { include: { faceitProfile: true } } },
+        });
 
-      if (!request.user.faceitProfile) {
-        throw new Error('FACEIT_PROFILE_NOT_FOUND');
-      }
+        if (!request || request.teamId !== teamId) {
+          throw new Error("JOIN_REQUEST_NOT_FOUND");
+        }
 
-      const activeMembers = await tx.teamMember.findMany({
-        where: { teamId, status: 'ACTIVE' },
-        select: { slotNumber: true },
+        if (request.status !== "PENDING") {
+          throw new Error("JOIN_REQUEST_NOT_PENDING");
+        }
+
+        if (!request.user.faceitProfile) {
+          throw new Error("FACEIT_PROFILE_NOT_FOUND");
+        }
+
+        const activeMembers = await tx.teamMember.findMany({
+          where: { teamId, status: "ACTIVE" },
+          select: { slotNumber: true },
+        });
+
+        if (activeMembers.length >= 5) {
+          throw new Error("TEAM_FULL");
+        }
+
+        const occupiedSlots = new Set(
+          activeMembers.map((member) => member.slotNumber),
+        );
+        const slotNumber = [1, 2, 3, 4, 5].find(
+          (slot) => !occupiedSlots.has(slot),
+        );
+
+        if (!slotNumber) {
+          throw new Error("TEAM_FULL");
+        }
+
+        const member = await tx.teamMember.create({
+          data: {
+            teamId,
+            userId: request.userId,
+            faceitProfileId: request.user.faceitProfile.id,
+            slotNumber,
+            role: "PLAYER",
+            status: "ACTIVE",
+          },
+          include: { user: true, faceitProfile: true },
+        });
+
+        await tx.joinRequest.update({
+          where: { id: requestId },
+          data: { status: "ACCEPTED" },
+        });
+
+        return member;
       });
 
-      if (activeMembers.length >= 5) {
-        throw new Error('TEAM_FULL');
-      }
+      return res.json({ member: result });
+    } catch (error: any) {
+      console.error("Failed to accept team join request:", error);
 
-      const occupiedSlots = new Set(activeMembers.map((member) => member.slotNumber));
-      const slotNumber = [1, 2, 3, 4, 5].find((slot) => !occupiedSlots.has(slot));
-
-      if (!slotNumber) {
-        throw new Error('TEAM_FULL');
-      }
-
-      const member = await tx.teamMember.create({
-        data: {
-          teamId,
-          userId: request.userId,
-          faceitProfileId: request.user.faceitProfile.id,
-          slotNumber,
-          role: 'PLAYER',
-          status: 'ACTIVE',
+      const errors: Record<string, { status: number; message: string }> = {
+        JOIN_REQUEST_NOT_FOUND: {
+          status: 404,
+          message: "Liittymispyyntöä ei löytynyt.",
         },
-        include: { user: true, faceitProfile: true },
+        JOIN_REQUEST_NOT_PENDING: {
+          status: 400,
+          message: "Liittymispyyntö on jo käsitelty.",
+        },
+        FACEIT_PROFILE_NOT_FOUND: {
+          status: 400,
+          message: "Hakijalla ei ole liitettyä FACEIT-profiilia.",
+        },
+        TEAM_FULL: { status: 400, message: "Joukkue on täynnä." },
+      };
+      const knownError = errors[error?.message];
+
+      if (knownError) {
+        return res
+          .status(knownError.status)
+          .json({ error: knownError.message });
+      }
+
+      if (error?.code === "P2002") {
+        return res
+          .status(400)
+          .json({ error: "Pelaaja on jo joukkueen jäsen." });
+      }
+
+      return res.status(500).json({
+        error: "Liittymispyynnön hyväksyminen epäonnistui.",
       });
-
-      await tx.joinRequest.update({
-        where: { id: requestId },
-        data: { status: 'ACCEPTED' },
-      });
-
-      return member;
-    });
-
-    return res.json({ member: result });
-  } catch (error: any) {
-    console.error('Failed to accept team join request:', error);
-
-    const errors: Record<string, { status: number; message: string }> = {
-      JOIN_REQUEST_NOT_FOUND: { status: 404, message: 'Liittymispyyntöä ei löytynyt.' },
-      JOIN_REQUEST_NOT_PENDING: { status: 400, message: 'Liittymispyyntö on jo käsitelty.' },
-      FACEIT_PROFILE_NOT_FOUND: { status: 400, message: 'Hakijalla ei ole liitettyä FACEIT-profiilia.' },
-      TEAM_FULL: { status: 400, message: 'Joukkue on täynnä.' },
-    };
-    const knownError = errors[error?.message];
-
-    if (knownError) {
-      return res.status(knownError.status).json({ error: knownError.message });
     }
-
-    if (error?.code === 'P2002') {
-      return res.status(400).json({ error: 'Pelaaja on jo joukkueen jäsen.' });
-    }
-
-    return res.status(500).json({
-      error: 'Liittymispyynnön hyväksyminen epäonnistui.',
-    });
-  }
-});
+  },
+);
 
 // ADMIN: Connect FACEIT
 apiRouter.post(

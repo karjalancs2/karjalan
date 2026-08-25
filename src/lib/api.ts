@@ -8,6 +8,12 @@ import {
 } from "../types";
 import { apiFetch } from "./http";
 
+function apiError(message: string, status: number) {
+  const error = new Error(message) as Error & { status: number };
+  error.status = status;
+  return error;
+}
+
 export const mockUsers: User[] = [
   {
     id: "u1",
@@ -211,9 +217,35 @@ export const api = {
       return mockTeams;
     }
   },
-  getTeam: async (id: string) => mockTeams.find((t) => t.id === id),
+  getTeam: async (id: string) => {
+    try {
+      const res = await apiFetch(`/api/teams/${id}`);
+      if (!res.ok) return undefined;
+      const data = await res.json();
+      return data.team;
+    } catch {
+      return mockTeams.find((t) => t.id === id);
+    }
+  },
   getUsers: async () => mockUsers,
-  getUser: async (id: string) => mockUsers.find((u) => u.id === id),
+  getUser: async (id: string) => {
+    try {
+      const res = await apiFetch(`/api/users/${id}`);
+      if (!res.ok) return undefined;
+      const data = await res.json();
+      const user = data.user;
+      return user
+        ? {
+            ...user,
+            avatar: user.faceitAvatar || user.avatar,
+            faceitLevel: user.faceitLevel,
+            faceitElo: user.faceitElo,
+          }
+        : undefined;
+    } catch {
+      return mockUsers.find((u) => u.id === id);
+    }
+  },
   getLobbies: async () => {
     try {
       const res = await apiFetch("/api/lobbies");
@@ -245,28 +277,37 @@ export const api = {
   },
 
   // Create a new lobby (requires authentication cookie)
-  createLobby: async (payload: { tournamentId: string; name: string; description?: string; faceitUrl?: string }) => {
+  createLobby: async (payload: {
+    tournamentId: string;
+    name: string;
+    description?: string;
+    faceitUrl?: string;
+  }) => {
     try {
-      const res = await apiFetch('/api/lobbies', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      const res = await apiFetch("/api/lobbies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         // If server requires FACEIT profile and caller provided a faceitUrl, retry once including faceitUrl
-        if (err.error && err.error.toString().toLowerCase().includes('faceit') && payload.faceitUrl) {
+        if (
+          err.error &&
+          err.error.toString().toLowerCase().includes("faceit") &&
+          payload.faceitUrl
+        ) {
           try {
-            const retryRes = await apiFetch('/api/lobbies', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
+            const retryRes = await apiFetch("/api/lobbies", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
               body: JSON.stringify(payload),
             });
             if (!retryRes.ok) {
               const rerr = await retryRes.json().catch(() => ({}));
-              throw new Error(rerr.error || 'Failed to create lobby (retry)');
+              throw new Error(rerr.error || "Failed to create lobby (retry)");
             }
             const data2 = await retryRes.json();
             return data2;
@@ -274,7 +315,7 @@ export const api = {
             throw retryErr;
           }
         }
-        throw new Error(err.error || 'Failed to create lobby');
+        throw apiError(err.error || "Failed to create lobby", res.status);
       }
       const data = await res.json();
       return data; // { id }
@@ -287,10 +328,13 @@ export const api = {
   // Delete a lobby (captain or admin via email)
   deleteLobby: async (lobbyId: string) => {
     try {
-      const res = await apiFetch(`/api/lobbies/${lobbyId}`, { method: 'DELETE', credentials: 'include' });
+      const res = await apiFetch(`/api/lobbies/${lobbyId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to delete lobby');
+        throw new Error(err.error || "Failed to delete lobby");
       }
       return await res.json();
     } catch (e) {
@@ -302,7 +346,9 @@ export const api = {
   // Notifications
   getNotifications: async () => {
     try {
-      const res = await apiFetch('/api/notifications', { credentials: 'include' });
+      const res = await apiFetch("/api/notifications", {
+        credentials: "include",
+      });
       if (!res.ok) return [];
       return await res.json();
     } catch (e) {
@@ -314,10 +360,18 @@ export const api = {
   // Link FACEIT profile for the current user
   linkFaceit: async (faceitUrl: string) => {
     try {
-      const res = await apiFetch('/api/auth/faceit/link', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ faceitUrl }) });
+      const res = await apiFetch("/api/auth/faceit/link", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ faceitUrl }),
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to link FACEIT profile');
+        throw apiError(
+          err.error || "Failed to link FACEIT profile",
+          res.status,
+        );
       }
       return await res.json();
     } catch (e) {
@@ -328,8 +382,11 @@ export const api = {
 
   markNotificationRead: async (id: string) => {
     try {
-      const res = await apiFetch(`/api/notifications/${id}/read`, { method: 'POST', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to mark notification read');
+      const res = await apiFetch(`/api/notifications/${id}/read`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to mark notification read");
       return await res.json();
     } catch (e) {
       console.error(e);
@@ -339,8 +396,11 @@ export const api = {
 
   markAllNotificationsRead: async () => {
     try {
-      const res = await apiFetch(`/api/notifications/mark-all-read`, { method: 'POST', credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to mark notifications read');
+      const res = await apiFetch(`/api/notifications/mark-all-read`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to mark notifications read");
       return await res.json();
     } catch (e) {
       console.error(e);
@@ -352,14 +412,14 @@ export const api = {
   joinLobby: async (lobbyId: string, slotId: string) => {
     try {
       const res = await apiFetch(`/api/lobbies/${lobbyId}/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ slotId }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to join slot');
+        throw new Error(err.error || "Failed to join slot");
       }
       return await res.json();
     } catch (e) {
@@ -369,17 +429,20 @@ export const api = {
   },
 
   // Submit a join request (recommended flow) — creates a pending request for captain to accept/reject
-  requestJoin: async (lobbyId: string, payload: { message?: string; slotId?: string }) => {
+  requestJoin: async (
+    lobbyId: string,
+    payload: { message?: string; slotId?: string },
+  ) => {
     try {
       const res = await apiFetch(`/api/lobbies/${lobbyId}/requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to submit request');
+        throw new Error(err.error || "Failed to submit request");
       }
       return await res.json();
     } catch (e) {
@@ -391,7 +454,9 @@ export const api = {
   // Get pending requests for a lobby (captain only)
   getLobbyRequests: async (lobbyId: string) => {
     try {
-      const res = await apiFetch(`/api/lobbies/${lobbyId}/requests`, { credentials: 'include' });
+      const res = await apiFetch(`/api/lobbies/${lobbyId}/requests`, {
+        credentials: "include",
+      });
       if (!res.ok) return [];
       return await res.json();
     } catch (e) {
@@ -402,10 +467,13 @@ export const api = {
 
   acceptRequest: async (lobbyId: string, reqId: string) => {
     try {
-      const res = await apiFetch(`/api/lobbies/${lobbyId}/requests/${reqId}/accept`, { method: 'POST', credentials: 'include' });
+      const res = await apiFetch(
+        `/api/lobbies/${lobbyId}/requests/${reqId}/accept`,
+        { method: "POST", credentials: "include" },
+      );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to accept request');
+        throw new Error(err.error || "Failed to accept request");
       }
       return await res.json();
     } catch (e) {
@@ -416,10 +484,13 @@ export const api = {
 
   rejectRequest: async (lobbyId: string, reqId: string) => {
     try {
-      const res = await apiFetch(`/api/lobbies/${lobbyId}/requests/${reqId}/reject`, { method: 'POST', credentials: 'include' });
+      const res = await apiFetch(
+        `/api/lobbies/${lobbyId}/requests/${reqId}/reject`,
+        { method: "POST", credentials: "include" },
+      );
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to reject request');
+        throw new Error(err.error || "Failed to reject request");
       }
       return await res.json();
     } catch (e) {
@@ -430,7 +501,9 @@ export const api = {
 
   getChatMessages: async (lobbyId: string) => {
     try {
-      const res = await apiFetch(`/api/lobbies/${lobbyId}/chat/messages`, { credentials: 'include' });
+      const res = await apiFetch(`/api/lobbies/${lobbyId}/chat/messages`, {
+        credentials: "include",
+      });
       if (!res.ok) return [];
       return await res.json();
     } catch (e) {
@@ -441,10 +514,15 @@ export const api = {
 
   postChatMessage: async (lobbyId: string, content: string) => {
     try {
-      const res = await apiFetch(`/api/lobbies/${lobbyId}/chat/messages`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) });
+      const res = await apiFetch(`/api/lobbies/${lobbyId}/chat/messages`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to post message');
+        throw new Error(err.error || "Failed to post message");
       }
       return await res.json();
     } catch (e) {
