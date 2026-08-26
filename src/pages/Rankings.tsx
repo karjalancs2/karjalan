@@ -51,8 +51,8 @@ export default function Rankings() {
         </button>
       </div>
 
-      <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-lg overflow-x-auto">
+        <table className="w-full min-w-[640px] text-left border-collapse">
           <thead>
             <tr className="bg-neutral-950 border-b border-neutral-800 text-xs uppercase tracking-wider text-neutral-500">
               <th className="px-6 py-4 font-bold w-20 text-center">{language === 'fi' ? 'Sija' : 'Rank'}</th>

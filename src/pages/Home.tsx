@@ -30,11 +30,15 @@ export default function Home() {
       setBrackets(active?.brackets || null);
       const activeMatches = active?.matches || [];
       setLiveMatches(
-        activeMatches.filter((match: Match) => match.status.toLowerCase() === "live"),
+        activeMatches.filter(
+          (match: Match) => match.status.toLowerCase() === "live",
+        ),
       );
       setUpcomingMatches(
         activeMatches.filter((match: Match) =>
-          ["upcoming", "scheduled", "ready"].includes(match.status.toLowerCase()),
+          ["upcoming", "scheduled", "ready"].includes(
+            match.status.toLowerCase(),
+          ),
         ),
       );
       setTeams(await api.getTeams());
@@ -52,10 +56,10 @@ export default function Home() {
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-neutral-700 to-transparent"></div>
 
-        <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tighter text-white mb-6 relative z-10">
+        <h1 className="text-4xl sm:text-7xl font-extrabold tracking-tighter text-white mb-6 relative z-10">
           KARJALAN
         </h1>
-        <h3 className="text-xl sm:text-2xl font-medium text-neutral-300 mb-4 max-w-2xl relative z-10">
+        <h3 className="text-lg sm:text-2xl font-medium text-neutral-300 mb-4 max-w-2xl relative z-10">
           {t("hero.subtitle")}
         </h3>
         <p className="text-base sm:text-lg text-neutral-500 max-w-2xl mb-10 relative z-10">
@@ -80,7 +84,7 @@ export default function Home() {
       </section>
 
       {/* Main Content Area */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex flex-col gap-24">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col gap-16 sm:gap-24">
         {/* Live Matches */}
         {liveMatches.length > 0 && (
           <section className="flex flex-col gap-6">
@@ -109,7 +113,7 @@ export default function Home() {
                       </span>
                       <span>{match.map}</span>
                     </div>
-                    <div className="p-6 flex items-center justify-between">
+                    <div className="p-4 sm:p-6 flex items-center justify-between gap-2">
                       {/* Team 1 */}
                       <div className="flex flex-col items-center gap-3 w-1/3">
                         <div className="w-16 h-16 bg-neutral-800 rounded flex items-center justify-center text-xl font-bold border border-neutral-700">
@@ -122,7 +126,7 @@ export default function Home() {
 
                       {/* Score */}
                       <div className="flex flex-col items-center justify-center gap-2 w-1/3">
-                        <div className="text-4xl font-bold tracking-tighter flex items-center gap-3">
+                        <div className="text-3xl sm:text-4xl font-bold tracking-tighter flex items-center gap-2 sm:gap-3">
                           <span
                             className={
                               match.team1Score > match.team2Score
@@ -190,7 +194,7 @@ export default function Home() {
                 <Trophy className="w-96 h-96" />
               </div>
               <div className="flex-1 flex flex-col items-start gap-4 z-10">
-                <h3 className="text-3xl font-bold">
+                <h3 className="text-2xl sm:text-3xl font-bold break-words">
                   {featuredTournament.name}
                 </h3>
 
@@ -245,10 +249,16 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {(Array.isArray(brackets) ? brackets : brackets.items || []).map(
                 (bracket: any, index: number) => (
-                  <div key={bracket.id || index} className="bg-neutral-900 border border-neutral-800 rounded-lg p-5">
-                    <h3 className="font-bold">{bracket.name || bracket.round || `Round ${index + 1}`}</h3>
+                  <div
+                    key={bracket.id || index}
+                    className="bg-neutral-900 border border-neutral-800 rounded-lg p-5"
+                  >
+                    <h3 className="font-bold">
+                      {bracket.name || bracket.round || `Round ${index + 1}`}
+                    </h3>
                     <p className="text-sm text-neutral-500 mt-2">
-                      {bracket.matches?.length ?? bracket.match_count ?? 0} {language === "fi" ? "ottelua" : "matches"}
+                      {bracket.matches?.length ?? bracket.match_count ?? 0}{" "}
+                      {language === "fi" ? "ottelua" : "matches"}
                     </p>
                   </div>
                 ),
@@ -264,10 +274,19 @@ export default function Home() {
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {upcomingMatches.map((match) => (
-                <div key={match.id} className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between">
-                  <span className="font-semibold">{match.team1Id || "TBA"}</span>
-                  <span className="text-neutral-500 text-sm">{match.round || "Match"}</span>
-                  <span className="font-semibold">{match.team2Id || "TBA"}</span>
+                <div
+                  key={match.id}
+                  className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between"
+                >
+                  <span className="font-semibold">
+                    {match.team1Id || "TBA"}
+                  </span>
+                  <span className="text-neutral-500 text-sm">
+                    {match.round || "Match"}
+                  </span>
+                  <span className="font-semibold">
+                    {match.team2Id || "TBA"}
+                  </span>
                 </div>
               ))}
             </div>

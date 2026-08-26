@@ -21,8 +21,8 @@ export default function Tournaments() {
   }, []);
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-12">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="mb-8 sm:mb-12">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <h1 className="text-4xl font-extrabold tracking-tight uppercase">
             {t("nav.tournaments")}
@@ -66,10 +66,10 @@ export default function Tournaments() {
           <Link
             key={tournament.id}
             to={`/tournaments/${tournament.id}`}
-            className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-neutral-700 transition-colors group"
+            className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5 hover:border-neutral-700 transition-colors group"
           >
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-neutral-950 border border-neutral-800 rounded flex items-center justify-center relative overflow-hidden group-hover:border-neutral-600 transition-colors">
+            <div className="flex items-center gap-4 sm:gap-6 min-w-0">
+              <div className="w-14 h-14 sm:w-20 sm:h-20 shrink-0 bg-neutral-950 border border-neutral-800 rounded flex items-center justify-center relative overflow-hidden group-hover:border-neutral-600 transition-colors">
                 <Trophy className="w-8 h-8 text-neutral-700" />
                 {tournament.status === "live" && (
                   <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-bl"></div>
@@ -77,8 +77,10 @@ export default function Tournaments() {
               </div>
 
               <div className="flex flex-col">
-                <div className="flex items-center gap-3 mb-1">
-                  <h2 className="text-xl font-bold">{tournament.name}</h2>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+                  <h2 className="text-lg sm:text-xl font-bold break-words">
+                    {tournament.name}
+                  </h2>
                   {tournament.status === "live" && (
                     <span className="text-[10px] font-bold bg-red-500/10 text-red-500 px-2 py-0.5 rounded uppercase">
                       {language === "fi" ? "Live" : "Live"}
@@ -90,7 +92,7 @@ export default function Tournaments() {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-neutral-400">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm font-medium text-neutral-400">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-neutral-500" />
                     <span>
@@ -127,7 +129,7 @@ export default function Tournaments() {
                       : "Free"}
                 </span>
               </div>
-              <button className="bg-white text-black font-bold px-6 py-2.5 rounded-sm hover:bg-neutral-200 transition-colors whitespace-nowrap">
+              <button className="w-full md:w-auto bg-white text-black font-bold px-6 py-3 rounded-sm hover:bg-neutral-200 transition-colors whitespace-nowrap">
                 {tournament.status === "registration"
                   ? t("btn.register")
                   : language === "fi"

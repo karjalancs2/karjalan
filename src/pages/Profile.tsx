@@ -33,10 +33,10 @@ export default function Profile() {
     );
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col gap-8">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-6 sm:gap-8">
       {/* Header */}
-      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-8 flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden">
-        <div className="w-32 h-32 bg-neutral-800 border-2 border-neutral-700 rounded-lg flex items-center justify-center text-4xl font-bold shadow-xl z-10 overflow-hidden">
+      <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 sm:p-8 flex flex-col md:flex-row items-center md:items-start gap-5 sm:gap-8 relative overflow-hidden">
+        <div className="w-24 h-24 sm:w-32 sm:h-32 bg-neutral-800 border-2 border-neutral-700 rounded-lg flex items-center justify-center text-4xl font-bold shadow-xl z-10 overflow-hidden">
           {user.faceitAvatar ? (
             <img
               src={user.faceitAvatar}
@@ -50,7 +50,7 @@ export default function Profile() {
 
         <div className="flex flex-col items-center md:items-start z-10 flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl font-extrabold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight break-words text-center md:text-left">
               {user.username}
             </h1>
             <span className="text-2xl">🇫🇮</span>
@@ -84,7 +84,7 @@ export default function Profile() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 flex flex-col gap-6">
           {team && (
-            <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 sm:p-6">
               <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-4">
                 {language === "fi" ? "Nykyinen Joukkue" : "Current Team"}
               </h3>
@@ -124,7 +124,7 @@ export default function Profile() {
         </div>
 
         <div className="lg:col-span-2">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 min-h-[300px] flex flex-col items-center justify-center text-center">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 sm:p-6 min-h-[300px] flex flex-col items-center justify-center text-center">
             <Award className="w-12 h-12 text-neutral-700 mb-4" />
             <h3 className="font-bold text-lg text-white mb-2">
               {language === "fi"

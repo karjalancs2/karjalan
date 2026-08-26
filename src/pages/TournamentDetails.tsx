@@ -217,7 +217,7 @@ export default function TournamentDetails() {
         )}
 
         {activeTab === "bracket" && (
-          <div className="w-full overflow-x-auto pb-8">
+          <div className="w-full overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
             <div className="min-w-[800px] flex gap-16">
               {/* Visual Bracket Implementation */}
               <div className="flex flex-col gap-4 justify-center">

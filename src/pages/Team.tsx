@@ -268,7 +268,7 @@ export default function Team() {
   };
 
   return (
-    <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
       <Link
         to="/teams"
         className="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors mb-8"
@@ -294,13 +294,13 @@ export default function Team() {
 
       {!loading && !error && team && (
         <>
-          <header className="border-b border-neutral-800 pb-8 mb-8">
-            <div className="flex items-start justify-between gap-4">
+          <header className="border-b border-neutral-800 pb-6 sm:pb-8 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
               <div>
                 <p className="text-xs uppercase tracking-widest text-neutral-500 mb-2">
                   {language === "fi" ? "Joukkue" : "Team"}
                 </p>
-                <h1 className="text-4xl font-extrabold uppercase tracking-tight">
+                <h1 className="text-3xl sm:text-4xl font-extrabold uppercase tracking-tight break-words">
                   {team.name}
                 </h1>
                 <p className="text-neutral-400 mt-3">
@@ -308,7 +308,7 @@ export default function Team() {
                   {team.captain.username}
                 </p>
               </div>
-              <div className="text-right text-sm text-neutral-400">
+              <div className="text-left sm:text-right text-sm text-neutral-400">
                 <div className="text-white font-bold text-lg">
                   {team.rankingPoints}
                 </div>
@@ -320,7 +320,7 @@ export default function Team() {
                     type="button"
                     onClick={deleteTeam}
                     disabled={deleting}
-                    className="mt-4 inline-flex items-center gap-2 border border-red-900/60 px-3 py-2 text-xs font-bold uppercase text-red-400 hover:border-red-500 hover:text-red-300 disabled:opacity-50"
+                    className="mt-4 inline-flex items-center gap-2 border border-red-900/60 px-3 py-3 text-xs font-bold uppercase text-red-400 hover:border-red-500 hover:text-red-300 disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4" />
                     {deleting
@@ -378,7 +378,7 @@ export default function Team() {
                           ? `Pyydä paikkaa ${slotNumber}`
                           : `Request slot ${slotNumber}`
                       }
-                      className="min-h-56 border border-dashed border-neutral-700 bg-neutral-950/40 rounded-sm flex flex-col items-center justify-center text-neutral-500"
+                      className="min-h-48 sm:min-h-56 border border-dashed border-neutral-700 bg-neutral-950/40 rounded-sm flex flex-col items-center justify-center text-neutral-500"
                     >
                       <span className="text-3xl mb-3">+</span>
                       <span className="text-xs font-bold tracking-widest">
@@ -401,7 +401,7 @@ export default function Team() {
                 return (
                   <article
                     key={slotNumber}
-                    className="min-h-56 border border-neutral-800 bg-neutral-900 rounded-sm p-5 flex flex-col"
+                    className="min-h-48 sm:min-h-56 border border-neutral-800 bg-neutral-900 rounded-sm p-4 sm:p-5 flex flex-col"
                   >
                     <div className="flex items-center justify-between text-xs text-neutral-500 mb-5">
                       <span>#{slotNumber}</span>

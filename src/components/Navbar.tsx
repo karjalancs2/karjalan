@@ -1,12 +1,17 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { useAuth } from "../contexts/AuthContext";
-import { Search, Menu, UserCircle, Twitch } from "lucide-react";
+import { Search, Menu, UserCircle, Twitch, X } from "lucide-react";
 import { KarjalanMark } from "./KarjalanMark";
 
 export function Navbar() {
   const { language, setLanguage, t } = useTranslation();
   const { user, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <nav className="border-b border-neutral-800 bg-black/50 backdrop-blur-md sticky top-0 z-50">
@@ -15,6 +20,7 @@ export function Navbar() {
           <div className="flex items-center gap-8">
             <Link
               to="/"
+              onClick={closeMenu}
               className="text-2xl font-bold tracking-widest text-white flex items-center gap-3"
             >
               <KarjalanMark className="w-8 h-8" />
@@ -124,11 +130,65 @@ export function Navbar() {
                 </>
               )}
             </div>
-            <button className="md:hidden text-neutral-400 hover:text-white ml-2">
-              <Menu className="w-6 h-6" />
+            <button
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              className="md:hidden text-neutral-400 hover:text-white ml-2 p-2"
+              aria-label={menuOpen ? "Close navigation" : "Open navigation"}
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
+        {menuOpen && (
+          <div className="md:hidden border-t border-neutral-800 py-3">
+            <div className="flex flex-col gap-1">
+              {[
+                ["/", t("nav.home")],
+                ["/tournaments", t("nav.tournaments")],
+                ["/rankings", t("nav.rankings")],
+                ["/teams", t("nav.teams")],
+                ["/teamfinder", t("nav.teamfinder")],
+                ["/watch", t("nav.watch")],
+              ].map(([to, label]) => (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={closeMenu}
+                  className={`px-3 py-3 text-sm font-medium ${location.pathname === to ? "text-white bg-neutral-900" : "text-neutral-300"}`}
+                >
+                  {label}
+                </Link>
+              ))}
+              {user ? (
+                <>
+                  <Link
+                    to={`/profile/${user.id}`}
+                    onClick={closeMenu}
+                    className="px-3 py-3 text-sm font-bold text-white"
+                  >
+                    {language === "fi" ? "Profiili" : "Profile"}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      logout();
+                    }}
+                    className="px-3 py-3 text-left text-sm font-medium text-neutral-400"
+                  >
+                    {language === "fi" ? "Kirjaudu ulos" : "Log out"}
+                  </button>
+                </>
+              ) : (
+                <Link to="/login" onClick={closeMenu} className="px-3 py-3 text-sm font-medium text-neutral-300">
+                  {t("nav.login")}
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );

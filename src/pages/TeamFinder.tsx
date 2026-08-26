@@ -239,9 +239,9 @@ export default function TeamFinder() {
   const getTournament = (id: string) => tournaments.find((t) => t.id === id);
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-12">
-        <h1 className="text-4xl font-extrabold tracking-tight mb-4 uppercase">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="mb-8 sm:mb-12">
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4 uppercase">
           {language === "fi" ? "JOUKKUEHAKU" : "FIND TEAM"}
         </h1>
         <p className="text-neutral-400 max-w-2xl text-lg">
@@ -284,7 +284,7 @@ export default function TeamFinder() {
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-neutral-900 border border-neutral-800 rounded p-6 w-full max-w-lg">
+          <div className="bg-neutral-900 border border-neutral-800 rounded p-5 sm:p-6 w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-4">
               {language === "fi" ? "Luo joukkue" : "Create Team"}
             </h3>
@@ -432,7 +432,7 @@ export default function TeamFinder() {
 
       {showRequestsFor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-neutral-900 border border-neutral-800 rounded p-6 w-full max-w-2xl">
+          <div className="bg-neutral-900 border border-neutral-800 rounded p-5 sm:p-6 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-4">
               {language === "fi" ? "Pyynnöt" : "Requests"} —{" "}
               {lobbies.find((l) => l.id === showRequestsFor)?.name}
@@ -451,7 +451,7 @@ export default function TeamFinder() {
                 {requests.map((r) => (
                   <div
                     key={r.id}
-                    className="flex items-center justify-between bg-neutral-950 border border-neutral-800 p-3 rounded"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-neutral-950 border border-neutral-800 p-3 rounded"
                   >
                     <div>
                       <div className="font-semibold">
@@ -463,7 +463,7 @@ export default function TeamFinder() {
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                       <button
                         onClick={() => rejectRequest(showRequestsFor!, r.id)}
                         className="px-3 py-1 rounded border border-neutral-700"
@@ -495,7 +495,7 @@ export default function TeamFinder() {
 
       {showChatFor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-neutral-900 border border-neutral-800 rounded p-6 w-full max-w-2xl flex flex-col">
+          <div className="bg-neutral-900 border border-neutral-800 rounded p-5 sm:p-6 w-[calc(100%-2rem)] max-w-2xl max-h-[90vh] flex flex-col">
             <h3 className="text-xl font-bold mb-4">
               {language === "fi" ? "Tiimichat" : "Team Chat"} —{" "}
               {lobbies.find((l) => l.id === showChatFor)?.name}
@@ -520,7 +520,7 @@ export default function TeamFinder() {
                 ))}
               </div>
             )}
-            <div className="flex gap-2 mt-4">
+            <div className="flex flex-col sm:flex-row gap-2 mt-4">
               <input
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
@@ -532,13 +532,13 @@ export default function TeamFinder() {
               <button
                 onClick={() => sendChatMessage(showChatFor!)}
                 disabled={chatSending}
-                className="px-4 py-2 bg-white text-black font-bold rounded"
+                className="px-4 py-3 sm:py-2 bg-white text-black font-bold rounded"
               >
                 {language === "fi" ? "Lähetä" : "Send"}
               </button>
               <button
                 onClick={() => setShowChatFor(null)}
-                className="px-4 py-2 rounded border border-neutral-700"
+                className="px-4 py-3 sm:py-2 rounded border border-neutral-700"
               >
                 {language === "fi" ? "Sulje" : "Close"}
               </button>
@@ -562,9 +562,9 @@ export default function TeamFinder() {
           return (
             <div
               key={lobby.id}
-              className="bg-neutral-900 border border-neutral-800 rounded-lg p-6"
+              className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 sm:p-6"
             >
-              <div className="flex justify-between items-start mb-6">
+              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-5 mb-6">
                 <div>
                   <h2 className="text-2xl font-bold flex items-center gap-3">
                     <span className="text-lg">🇫🇮</span> {lobby.name}
@@ -582,7 +582,7 @@ export default function TeamFinder() {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   {(user?.role === "ADMIN" ||
                     user?.id === lobby.captainId ||
                     lobby.slots.some(
