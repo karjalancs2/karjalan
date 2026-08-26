@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
+import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
 import { Tournament } from "../types";
 import { Link } from "react-router-dom";
@@ -9,6 +10,7 @@ import { Trophy, Users, Calendar } from "lucide-react";
 
 export default function Tournaments() {
   const { t, language } = useTranslation();
+  const { user } = useAuth();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
   useEffect(() => {
@@ -21,9 +23,19 @@ export default function Tournaments() {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="mb-12">
-        <h1 className="text-4xl font-extrabold tracking-tight mb-4 uppercase">
-          {t("nav.tournaments")}
-        </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <h1 className="text-4xl font-extrabold tracking-tight uppercase">
+            {t("nav.tournaments")}
+          </h1>
+          {user?.role === "ADMIN" && (
+            <Link
+              to="/admin/tournaments"
+              className="inline-flex items-center justify-center bg-white text-black font-bold px-5 py-3 rounded-sm hover:bg-neutral-200 transition-colors"
+            >
+              Hallinnoi Turnauksia (Admin)
+            </Link>
+          )}
+        </div>
         <p className="text-neutral-400 max-w-2xl text-lg">
           {language === "fi"
             ? "Osallistu Suomen kovatasoisimpiin CS2-turnauksiin. Kerää ranking-pisteitä ja nouse huipulle."

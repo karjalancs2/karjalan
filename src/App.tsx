@@ -1,6 +1,8 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { TranslationProvider } from "./contexts/TranslationContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { useAuth } from "./contexts/AuthContext";
+import { ReactNode } from "react";
 import { Layout } from "./components/Layout";
 
 // Pages
@@ -18,6 +20,14 @@ import Auth from "./pages/Auth";
 import LinkFaceitTeam from "./pages/LinkFaceitTeam";
 import NotFound from "./pages/NotFound";
 import AdminTournaments from "./pages/AdminTournaments";
+
+function AdminRoute({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (user?.role !== "ADMIN") return <Navigate to="/" replace />;
+  return children;
+}
 
 export default function App() {
   return (
@@ -40,7 +50,14 @@ export default function App() {
               <Route path="/players" element={<Rankings />} />
               <Route path="/teamfinder" element={<TeamFinder />} />
               <Route path="/watch" element={<Watch />} />
-              <Route path="/admin/tournaments" element={<AdminTournaments />} />
+              <Route
+                path="/admin/tournaments"
+                element={
+                  <AdminRoute>
+                    <AdminTournaments />
+                  </AdminRoute>
+                }
+              />
               <Route path="/profile/:id" element={<Profile />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/register" element={<Auth />} />
