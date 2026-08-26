@@ -143,6 +143,45 @@ apiRouter.get("/users", async (_req, res) => {
   }
 });
 
+apiRouter.get("/search", async (req, res) => {
+  const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (!query) return res.json({ teams: [], players: [] });
+
+  try {
+    const [teams, players] = await Promise.all([
+      prisma.team.findMany({
+        where: { name: { contains: query, mode: "insensitive" } },
+        select: { id: true, name: true, logo: true },
+        orderBy: { name: "asc" },
+        take: 5,
+      }),
+      prisma.user.findMany({
+        where: {
+          OR: [
+            { username: { contains: query, mode: "insensitive" } },
+            { faceitUsername: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          username: true,
+          faceitUsername: true,
+          faceitAvatar: true,
+          faceitLevel: true,
+          faceitElo: true,
+        },
+        orderBy: { username: "asc" },
+        take: 5,
+      }),
+    ]);
+
+    return res.json({ teams, players });
+  } catch (error) {
+    console.error("Failed to search:", error);
+    return res.status(500).json({ error: "Search failed" });
+  }
+});
+
 // Link and verify FACEIT profile for authenticated user
 apiRouter.post("/auth/faceit/link", authMiddleware, async (req, res) => {
   const { faceitUrl } = req.body;
@@ -245,13 +284,17 @@ apiRouter.post(
   authMiddleware,
   async (req, res) => {
     const userId = (req as any).user.id;
-    if (!(await isAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+    if (!(await isAdmin(userId)))
+      return res.status(403).json({ error: "Forbidden" });
 
-    const input = typeof req.body?.faceitTournament === "string"
-      ? req.body.faceitTournament
-      : "";
+    const input =
+      typeof req.body?.faceitTournament === "string"
+        ? req.body.faceitTournament
+        : "";
     if (!input.trim()) {
-      return res.status(400).json({ error: "FACEIT tournament ID or URL is required" });
+      return res
+        .status(400)
+        .json({ error: "FACEIT tournament ID or URL is required" });
     }
 
     try {

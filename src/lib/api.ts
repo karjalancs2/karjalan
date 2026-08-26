@@ -7,6 +7,11 @@ function apiError(message: string, status: number) {
 }
 
 export const api = {
+  search: async (query: string) => {
+    const res = await apiFetch(`/api/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error("Search failed");
+    return await res.json();
+  },
   getActiveTournament: async () => {
     try {
       const res = await apiFetch("/api/tournaments/active");
@@ -23,7 +28,8 @@ export const api = {
       body: JSON.stringify({ faceitTournament }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw apiError(data.error || "Failed to import tournament", res.status);
+    if (!res.ok)
+      throw apiError(data.error || "Failed to import tournament", res.status);
     return data;
   },
   getTournaments: async () => {
