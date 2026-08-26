@@ -74,7 +74,7 @@ export function Navbar() {
               href="https://www.twitch.tv/karjalancs2"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-neutral-400 hover:text-purple-400 transition-colors"
+              className="hidden md:flex text-neutral-400 hover:text-purple-400 transition-colors"
               title="Watch on Twitch"
             >
               <Twitch className="w-5 h-5" />
@@ -161,6 +161,16 @@ export function Navbar() {
                   {label}
                 </Link>
               ))}
+              <a
+                href="https://www.twitch.tv/karjalancs2"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={closeMenu}
+                className="flex items-center gap-2 px-3 py-3 text-sm font-medium text-neutral-300"
+              >
+                <Twitch className="w-4 h-4" />
+                Twitch
+              </a>
               {user ? (
                 <>
                   <Link
