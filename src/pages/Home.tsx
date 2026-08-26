@@ -248,7 +248,9 @@ export default function Home() {
             </p>
           </div>
           <a
-            href="#"
+            href="https://discord.gg/AnYwNXdt4"
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold px-8 py-4 rounded-sm transition-colors text-lg uppercase tracking-wide shadow-lg shadow-[#5865F2]/20"
           >
             {language === "fi" ? "LIITY DISCORDIIN" : "JOIN DISCORD"}
