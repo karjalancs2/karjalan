@@ -38,6 +38,8 @@ export interface Tournament {
   entryFee: number;
   format: string; // e.g., 'Single Elimination'
   registrationDeadline: string;
+  isActive?: boolean;
+  bracketData?: unknown;
 }
 
 export interface Match {

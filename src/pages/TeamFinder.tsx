@@ -730,19 +730,23 @@ export default function TeamFinder() {
                                     className={`${faceitTierClass(player?.faceitLevel ?? mem.faceitProfile?.level, player?.faceitElo ?? mem.faceitProfile?.elo)} px-1.5 py-0.5 rounded text-[10px] font-bold`}
                                   >
                                     Lvl{" "}
-                                    {player?.faceitLevel ?? mem.faceitProfile?.level}
+                                    {player?.faceitLevel ??
+                                      mem.faceitProfile?.level}
                                   </span>
                                 )}
                                 {(player?.faceitElo ??
                                   mem.faceitProfile?.elo) != null && (
                                   <span
                                     className={faceitTierClass(
-                                      player?.faceitLevel ?? mem.faceitProfile?.level,
-                                      player?.faceitElo ?? mem.faceitProfile?.elo,
+                                      player?.faceitLevel ??
+                                        mem.faceitProfile?.level,
+                                      player?.faceitElo ??
+                                        mem.faceitProfile?.elo,
                                     )}
                                   >
                                     Elo{" "}
-                                    {player?.faceitElo ?? mem.faceitProfile?.elo}
+                                    {player?.faceitElo ??
+                                      mem.faceitProfile?.elo}
                                   </span>
                                 )}
                                 <span>{player?.role || mem.role}</span>

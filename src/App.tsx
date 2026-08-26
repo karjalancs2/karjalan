@@ -17,6 +17,7 @@ import Watch from "./pages/Watch";
 import Auth from "./pages/Auth";
 import LinkFaceitTeam from "./pages/LinkFaceitTeam";
 import NotFound from "./pages/NotFound";
+import AdminTournaments from "./pages/AdminTournaments";
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
               <Route path="/players" element={<Rankings />} />
               <Route path="/teamfinder" element={<TeamFinder />} />
               <Route path="/watch" element={<Watch />} />
+              <Route path="/admin/tournaments" element={<AdminTournaments />} />
               <Route path="/profile/:id" element={<Profile />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/register" element={<Auth />} />

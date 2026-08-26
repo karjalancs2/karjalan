@@ -95,6 +95,8 @@ model Tournament {
   format        String    @default("Single Elimination")
   registrationDeadline DateTime?
   faceitId      String?
+  isActive      Boolean   @default(false)
+  bracketData   Json?
   
   lobbies       Lobby[]
   matches       Match[]

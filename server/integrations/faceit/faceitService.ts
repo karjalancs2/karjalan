@@ -16,6 +16,116 @@ export class FaceitService {
     this.apiKey = process.env.FACEIT_API_KEY;
   }
 
+  private getApiKey() {
+    if (!this.apiKey) throw new Error("FACEIT_API_KEY is not configured");
+    return this.apiKey;
+  }
+
+  private async fetchTournamentResource(
+    resource: "tournaments" | "championships",
+    faceitId: string,
+    suffix = "",
+  ) {
+    const response = await fetch(
+      `https://open.faceit.com/data/v4/${resource}/${encodeURIComponent(faceitId)}${suffix}`,
+      { headers: { Authorization: `Bearer ${this.getApiKey()}` } },
+    );
+    if (!response.ok) {
+      throw new Error(`FACEIT API returned ${response.status}`);
+    }
+    return response.json();
+  }
+
+  private extractTournamentId(input: string) {
+    const value = input.trim();
+    const match = value.match(
+      /(?:tournament|championship)\/([a-zA-Z0-9-]+)/i,
+    );
+    const id = match?.[1] || value;
+    if (!/^[a-zA-Z0-9-]+$/.test(id)) {
+      throw new Error("Invalid FACEIT tournament ID or URL");
+    }
+    return id;
+  }
+
+  async importTournament(input: string) {
+    const faceitId = this.extractTournamentId(input);
+    let resource: "tournaments" | "championships" = "tournaments";
+    let details: any;
+
+    try {
+      details = await this.fetchTournamentResource("tournaments", faceitId);
+    } catch {
+      resource = "championships";
+      details = await this.fetchTournamentResource("championships", faceitId);
+    }
+
+    const [brackets, matches] = await Promise.all([
+      this.fetchTournamentResource(resource, faceitId, "/brackets"),
+      this.fetchTournamentResource(resource, faceitId, "/matches"),
+    ]);
+
+    const tournament = await prisma.$transaction(async (tx) => {
+      await tx.tournament.updateMany({ data: { isActive: false } });
+
+      const existing = await tx.tournament.findFirst({ where: { faceitId } });
+      const data = {
+        name: details.name || `FACEIT Tournament ${faceitId}`,
+        status: details.status || "upcoming",
+        date: details.start_date ? new Date(details.start_date) : null,
+        prizePool: Number(details.prize_pool || 0),
+        teamCapacity: Number(details.max_participants || details.max_teams || 64),
+        format: details.format || "FACEIT",
+        faceitId,
+        isActive: true,
+        bracketData: brackets,
+      };
+
+      const saved = existing
+        ? await tx.tournament.update({ where: { id: existing.id }, data })
+        : await tx.tournament.create({ data });
+
+      const records = Array.isArray(matches) ? matches : matches.items || [];
+      for (const match of records) {
+        const matchId = match.match_id || match.id;
+        if (!matchId) continue;
+        const factions = match.teams || match.factions || {};
+        const teamIds = Object.values(factions)
+          .map((team: any) => team?.team_id || team?.id)
+          .filter(Boolean) as string[];
+        await tx.match.upsert({
+          where: { faceitId: matchId },
+          create: {
+            tournamentId: saved.id,
+            faceitId: matchId,
+            team1Id: teamIds[0] || null,
+            team2Id: teamIds[1] || null,
+            team1Score: Number(match.results?.[teamIds[0]] || 0),
+            team2Score: Number(match.results?.[teamIds[1]] || 0),
+            round: match.round || null,
+            status: match.status || "upcoming",
+            scheduledTime: match.scheduled_at
+              ? new Date(match.scheduled_at)
+              : null,
+          },
+          update: {
+            tournamentId: saved.id,
+            team1Id: teamIds[0] || null,
+            team2Id: teamIds[1] || null,
+            round: match.round || null,
+            status: match.status || "upcoming",
+            scheduledTime: match.scheduled_at
+              ? new Date(match.scheduled_at)
+              : null,
+          },
+        });
+      }
+      return saved;
+    });
+
+    return { tournament, brackets, matches: Array.isArray(matches) ? matches : matches.items || [] };
+  }
+
   /**
    * Called when an Admin connects a FACEIT tournament via URL.
    */

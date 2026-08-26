@@ -7,6 +7,25 @@ function apiError(message: string, status: number) {
 }
 
 export const api = {
+  getActiveTournament: async () => {
+    try {
+      const res = await apiFetch("/api/tournaments/active");
+      return res.ok ? await res.json() : null;
+    } catch {
+      return null;
+    }
+  },
+  importFaceitTournament: async (faceitTournament: string) => {
+    const res = await apiFetch("/api/admin/tournaments/import", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ faceitTournament }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw apiError(data.error || "Failed to import tournament", res.status);
+    return data;
+  },
   getTournaments: async () => {
     try {
       const res = await apiFetch("/api/tournaments");

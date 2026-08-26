@@ -213,6 +213,19 @@ apiRouter.get("/tournaments", async (req, res) => {
   res.json(tournaments);
 });
 
+apiRouter.get("/tournaments/active", async (_req, res) => {
+  const tournament = await prisma.tournament.findFirst({
+    where: { isActive: true },
+    include: { matches: true },
+  });
+  if (!tournament) return res.json(null);
+  return res.json({
+    tournament,
+    brackets: tournament.bracketData,
+    matches: tournament.matches,
+  });
+});
+
 // GET tournament by ID
 apiRouter.get("/tournaments/:id", async (req, res) => {
   const { id } = req.params;
@@ -226,6 +239,31 @@ apiRouter.get("/tournaments/:id/matches", async (req, res) => {
   const matches = await prisma.match.findMany({ where: { tournamentId: id } });
   res.json(matches);
 });
+
+apiRouter.post(
+  "/admin/tournaments/import",
+  authMiddleware,
+  async (req, res) => {
+    const userId = (req as any).user.id;
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: "Forbidden" });
+
+    const input = typeof req.body?.faceitTournament === "string"
+      ? req.body.faceitTournament
+      : "";
+    if (!input.trim()) {
+      return res.status(400).json({ error: "FACEIT tournament ID or URL is required" });
+    }
+
+    try {
+      return res.json(await faceitService.importTournament(input));
+    } catch (error: any) {
+      console.error("Failed to import FACEIT tournament:", error);
+      return res.status(502).json({
+        error: error.message || "Failed to import FACEIT tournament",
+      });
+    }
+  },
+);
 
 apiRouter.get("/matches/live", async (_req, res) => {
   const matches = await prisma.match.findMany({ where: { status: "live" } });
@@ -859,9 +897,7 @@ apiRouter.post(
       if (!lobby) return res.status(404).json({ error: "Lobby not found" });
 
       if (!isLobbyMember(lobby, userId) && !(await isAdmin(userId)))
-        return res
-          .status(403)
-          .json({ error: "Forbidden" });
+        return res.status(403).json({ error: "Forbidden" });
 
       const msg = await prisma.lobbyChatMessage.create({
         data: { lobbyId: id, userId, content },

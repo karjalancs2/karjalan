@@ -19,13 +19,24 @@ export default function Home() {
   const [featuredTournament, setFeaturedTournament] =
     useState<Tournament | null>(null);
   const [liveMatches, setLiveMatches] = useState<Match[]>([]);
+  const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([]);
+  const [brackets, setBrackets] = useState<any>(null);
   const [teams, setTeams] = useState<Team[]>([]);
 
   useEffect(() => {
     async function loadData() {
-      const allTournaments = await api.getTournaments();
-      setFeaturedTournament(allTournaments[0] || null);
-      setLiveMatches(await api.getLiveMatches());
+      const active = await api.getActiveTournament();
+      setFeaturedTournament(active?.tournament || null);
+      setBrackets(active?.brackets || null);
+      const activeMatches = active?.matches || [];
+      setLiveMatches(
+        activeMatches.filter((match: Match) => match.status.toLowerCase() === "live"),
+      );
+      setUpcomingMatches(
+        activeMatches.filter((match: Match) =>
+          ["upcoming", "scheduled", "ready"].includes(match.status.toLowerCase()),
+        ),
+      );
       setTeams(await api.getTeams());
     }
     loadData();
@@ -222,6 +233,43 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
+            </div>
+          </section>
+        )}
+
+        {featuredTournament && brackets && (
+          <section className="flex flex-col gap-6">
+            <h2 className="text-2xl font-bold tracking-wide uppercase">
+              {language === "fi" ? "Turnauskaavio" : "Tournament bracket"}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(Array.isArray(brackets) ? brackets : brackets.items || []).map(
+                (bracket: any, index: number) => (
+                  <div key={bracket.id || index} className="bg-neutral-900 border border-neutral-800 rounded-lg p-5">
+                    <h3 className="font-bold">{bracket.name || bracket.round || `Round ${index + 1}`}</h3>
+                    <p className="text-sm text-neutral-500 mt-2">
+                      {bracket.matches?.length ?? bracket.match_count ?? 0} {language === "fi" ? "ottelua" : "matches"}
+                    </p>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+        )}
+
+        {upcomingMatches.length > 0 && (
+          <section className="flex flex-col gap-6">
+            <h2 className="text-2xl font-bold tracking-wide uppercase">
+              {language === "fi" ? "Tulevat ottelut" : "Upcoming matches"}
+            </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {upcomingMatches.map((match) => (
+                <div key={match.id} className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between">
+                  <span className="font-semibold">{match.team1Id || "TBA"}</span>
+                  <span className="text-neutral-500 text-sm">{match.round || "Match"}</span>
+                  <span className="font-semibold">{match.team2Id || "TBA"}</span>
+                </div>
+              ))}
             </div>
           </section>
         )}
