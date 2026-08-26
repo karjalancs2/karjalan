@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, Shield, Trash2, ImageOff } from "lucide-react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
@@ -395,9 +395,9 @@ export default function Team() {
                 }
 
                 const profile = member.faceitProfile;
-                const avatar = profile.avatar || member.user.faceitAvatar;
-                const level = profile.level ?? member.user.faceitLevel;
-                const elo = profile.elo ?? member.user.faceitElo;
+                const avatar = member.user.faceitAvatar || profile?.avatar;
+                const level = member.user.faceitLevel ?? profile?.level;
+                const elo = member.user.faceitElo ?? profile?.elo;
                 return (
                   <article
                     key={slotNumber}
@@ -416,16 +416,16 @@ export default function Team() {
                     {avatar ? (
                       <img
                         src={avatar}
-                        alt={profile.username || member.user.username}
+                        alt={member.user.username}
                         className="w-16 h-16 rounded-full object-cover mb-4 border border-neutral-700"
                       />
                     ) : (
                       <div className="w-16 h-16 rounded-full bg-neutral-800 border border-neutral-700 mb-4 flex items-center justify-center text-xl font-bold">
-                        {profile.username.charAt(0).toUpperCase()}
+                        <ImageOff className="w-6 h-6 text-neutral-600" />
                       </div>
                     )}
                     <h3 className="font-bold text-lg truncate">
-                      {profile.username || member.user.username}
+                      {member.user.username}
                     </h3>
                     <div className="mt-auto pt-4 flex justify-between text-xs text-neutral-400">
                       <span

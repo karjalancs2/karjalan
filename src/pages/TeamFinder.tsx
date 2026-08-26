@@ -697,13 +697,13 @@ export default function TeamFinder() {
                               P{idx + 1}
                             </span>
                             <div className="w-12 h-12 bg-neutral-800 rounded-full flex items-center justify-center font-bold text-xl border border-neutral-700 group-hover:border-neutral-500 transition-colors overflow-hidden">
-                              {mem.faceitProfile?.avatar ||
-                              player?.faceitAvatar ||
+                              {player?.faceitAvatar ||
+                              mem.faceitProfile?.avatar ||
                               player?.avatar ? (
                                 <img
                                   src={
-                                    mem.faceitProfile?.avatar ||
                                     player?.faceitAvatar ||
+                                    mem.faceitProfile?.avatar ||
                                     player?.avatar
                                   }
                                   alt=""
@@ -724,29 +724,25 @@ export default function TeamFinder() {
                                   "Player"}
                               </div>
                               <div className="text-xs text-neutral-400 mt-0.5 flex flex-col items-center gap-1">
-                                {(mem.faceitProfile?.level ??
-                                  player?.faceitLevel) != null && (
+                                {(player?.faceitLevel ??
+                                  mem.faceitProfile?.level) != null && (
                                   <span
-                                    className={`${faceitTierClass(mem.faceitProfile?.level ?? player?.faceitLevel, mem.faceitProfile?.elo ?? player?.faceitElo)} px-1.5 py-0.5 rounded text-[10px] font-bold`}
+                                    className={`${faceitTierClass(player?.faceitLevel ?? mem.faceitProfile?.level, player?.faceitElo ?? mem.faceitProfile?.elo)} px-1.5 py-0.5 rounded text-[10px] font-bold`}
                                   >
                                     Lvl{" "}
-                                    {mem.faceitProfile?.level ??
-                                      player?.faceitLevel}
+                                    {player?.faceitLevel ?? mem.faceitProfile?.level}
                                   </span>
                                 )}
-                                {(mem.faceitProfile?.elo ??
-                                  player?.faceitElo) != null && (
+                                {(player?.faceitElo ??
+                                  mem.faceitProfile?.elo) != null && (
                                   <span
                                     className={faceitTierClass(
-                                      mem.faceitProfile?.level ??
-                                        player?.faceitLevel,
-                                      mem.faceitProfile?.elo ??
-                                        player?.faceitElo,
+                                      player?.faceitLevel ?? mem.faceitProfile?.level,
+                                      player?.faceitElo ?? mem.faceitProfile?.elo,
                                     )}
                                   >
                                     Elo{" "}
-                                    {mem.faceitProfile?.elo ??
-                                      player?.faceitElo}
+                                    {player?.faceitElo ?? mem.faceitProfile?.elo}
                                   </span>
                                 )}
                                 <span>{player?.role || mem.role}</span>

@@ -9,7 +9,7 @@ export interface User {
   faceitElo?: number;
   faceitAvatar?: string;
   faceitUsername?: string;
-  role?: "AWPer" | "Rifler" | "Entry" | "Support" | "IGL";
+  role?: string;
   teamId?: string;
 }
 

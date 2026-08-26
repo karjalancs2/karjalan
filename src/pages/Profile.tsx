@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../lib/api";
 import { User, Team } from "../types";
-import { Shield, Crosshair, Award } from "lucide-react";
+import { Crosshair, Award, ImageOff } from "lucide-react";
 import { faceitTierClass } from "../lib/utils";
 
 export default function Profile() {
@@ -36,10 +36,17 @@ export default function Profile() {
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col gap-8">
       {/* Header */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-8 flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-red-900/10 blur-3xl rounded-full mix-blend-screen pointer-events-none"></div>
 
-        <div className="w-32 h-32 bg-neutral-800 border-2 border-neutral-700 rounded-lg flex items-center justify-center text-4xl font-bold shadow-xl z-10">
-          {user.username.substring(0, 2).toUpperCase()}
+        <div className="w-32 h-32 bg-neutral-800 border-2 border-neutral-700 rounded-lg flex items-center justify-center text-4xl font-bold shadow-xl z-10 overflow-hidden">
+          {user.faceitAvatar ? (
+            <img
+              src={user.faceitAvatar}
+              alt={user.username}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <ImageOff className="w-10 h-10 text-neutral-600" />
+          )}
         </div>
 
         <div className="flex flex-col items-center md:items-start z-10 flex-1">
@@ -84,13 +91,16 @@ export default function Profile() {
               </h3>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-neutral-950 border border-neutral-800 rounded flex items-center justify-center font-bold">
-                  {team.name.substring(0, 2).toUpperCase()}
+                    {team.logo ? (
+                      <img src={team.logo} alt={team.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageOff className="w-5 h-5 text-neutral-600" />
+                    )}
                 </div>
                 <div>
                   <div className="font-bold">{team.name}</div>
                   <div className="text-xs text-neutral-400 mt-0.5">
-                    {language === "fi" ? "Suomen Ranking" : "Finnish Ranking"} #
-                    {team.id === "t1" ? "1" : team.id === "t2" ? "2" : "3"}
+                      {language === "fi" ? "Ranking-pisteet" : "Ranking points"}: {team.rankingPoints}
                   </div>
                 </div>
               </div>
@@ -101,25 +111,10 @@ export default function Profile() {
             <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-4">
               {language === "fi" ? "Pelaajatilastot" : "Player Stats"}
             </h3>
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center border-b border-neutral-800 pb-2">
-                <span className="text-neutral-400 font-medium">
-                  {language === "fi" ? "Ottelut pelattu" : "Matches played"}
-                </span>
-                <span className="font-bold text-white">45</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-neutral-800 pb-2">
-                <span className="text-neutral-400 font-medium">
-                  {language === "fi" ? "Voittoprosentti" : "Win rate"}
-                </span>
-                <span className="font-bold text-green-400">62%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-neutral-400 font-medium">
-                  {language === "fi" ? "K/D Suhde" : "K/D ratio"}
-                </span>
-                <span className="font-bold text-white">1.14</span>
-              </div>
+            <div className="border border-dashed border-neutral-800 rounded p-6 text-center text-neutral-500">
+              {language === "fi"
+                ? "Tietoja ei ole vielä saatavilla."
+                : "No data available yet."}
             </div>
           </div>
         </div>

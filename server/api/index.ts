@@ -97,15 +97,49 @@ apiRouter.get("/users/:id", async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.params.id },
-      include: { faceitProfile: true },
+      include: {
+        faceitProfile: true,
+        teamMemberships: {
+          where: { status: "ACTIVE" },
+          select: { teamId: true },
+          take: 1,
+        },
+      },
     });
     if (!user) return res.status(404).json({ error: "User not found" });
 
     await refreshFaceitStatsIfMissing(user);
-    return res.json({ user });
+    const { teamMemberships, ...userData } = user;
+    return res.json({
+      user: {
+        ...userData,
+        teamId: teamMemberships[0]?.teamId,
+      },
+    });
   } catch (error) {
     console.error("Failed to fetch user:", error);
     return res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
+apiRouter.get("/users", async (_req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+        country: true,
+        faceitLevel: true,
+        faceitElo: true,
+        faceitAvatar: true,
+        faceitUsername: true,
+        inGameRole: true,
+      },
+    });
+    return res.json(users);
+  } catch (error) {
+    console.error("Failed to fetch users:", error);
+    return res.status(500).json({ error: "Failed to fetch users" });
   }
 });
 
@@ -190,6 +224,11 @@ apiRouter.get("/tournaments/:id", async (req, res) => {
 apiRouter.get("/tournaments/:id/matches", async (req, res) => {
   const { id } = req.params;
   const matches = await prisma.match.findMany({ where: { tournamentId: id } });
+  res.json(matches);
+});
+
+apiRouter.get("/matches/live", async (_req, res) => {
+  const matches = await prisma.match.findMany({ where: { status: "live" } });
   res.json(matches);
 });
 
