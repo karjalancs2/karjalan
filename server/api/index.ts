@@ -66,6 +66,31 @@ async function refreshFaceitStatsForUsers(users: any[]) {
   await Promise.all(users.map((user) => refreshFaceitStatsIfMissing(user)));
 }
 
+async function isAdmin(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  return user?.role === "ADMIN";
+}
+
+function isLobbyMember(
+  lobby: {
+    captainId: string;
+    members?: Array<{ userId: string; status: string }>;
+  },
+  userId: string,
+) {
+  return (
+    lobby.captainId === userId ||
+    Boolean(
+      lobby.members?.some(
+        (member) => member.userId === userId && member.status === "active",
+      ),
+    )
+  );
+}
+
 apiRouter.use("/auth", authRouter);
 
 apiRouter.get("/users/:id", async (req, res) => {
@@ -397,7 +422,7 @@ apiRouter.post("/lobbies", authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE lobby (Authenticated) — only captain or special admin email can remove
+// DELETE lobby (Authenticated) — only captain or admin can remove
 apiRouter.delete("/lobbies/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const userId = (req as any).user.id;
@@ -406,11 +431,7 @@ apiRouter.delete("/lobbies/:id", authMiddleware, async (req, res) => {
     const lobby = await prisma.lobby.findUnique({ where: { id } });
     if (!lobby) return res.status(404).json({ error: "Lobby not found" });
 
-    // Load requester's email from DB (token may not contain email)
-    const requester = await prisma.user.findUnique({ where: { id: userId } });
-    const isAdminByEmail = requester?.email === "samuelgaffney@outlook.com";
-
-    if (lobby.captainId !== userId && !isAdminByEmail) {
+    if (lobby.captainId !== userId && !(await isAdmin(userId))) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
@@ -757,7 +778,17 @@ apiRouter.get(
   authMiddleware,
   async (req, res) => {
     const { id } = req.params;
+    const userId = (req as any).user.id;
     try {
+      const lobby = await prisma.lobby.findUnique({
+        where: { id },
+        include: { members: { select: { userId: true, status: true } } },
+      });
+      if (!lobby) return res.status(404).json({ error: "Lobby not found" });
+      if (!isLobbyMember(lobby, userId) && !(await isAdmin(userId))) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
       const messages = await prisma.lobbyChatMessage.findMany({
         where: { lobbyId: id },
         orderBy: { createdAt: "asc" },
@@ -781,20 +812,17 @@ apiRouter.post(
     const userId = (req as any).user.id;
 
     try {
-      // Verify membership (captain or occupied slot)
+      // Verify membership (captain or accepted member), or admin access.
       const lobby = await prisma.lobby.findUnique({
         where: { id },
-        include: { slots: true },
+        include: { members: { select: { userId: true, status: true } } },
       });
       if (!lobby) return res.status(404).json({ error: "Lobby not found" });
 
-      const isMember =
-        lobby.captainId === userId ||
-        lobby.slots.some((s) => s.userId === userId);
-      if (!isMember)
+      if (!isLobbyMember(lobby, userId) && !(await isAdmin(userId)))
         return res
           .status(403)
-          .json({ error: "Only team members can post messages" });
+          .json({ error: "Forbidden" });
 
       const msg = await prisma.lobbyChatMessage.create({
         data: { lobbyId: id, userId, content },
@@ -942,6 +970,31 @@ apiRouter.get("/teams/:id", async (req, res) => {
     return res.status(500).json({
       error: "Joukkueen tietojen haku epäonnistui.",
     });
+  }
+});
+
+apiRouter.delete("/teams/:id", authMiddleware, async (req, res) => {
+  const teamId = req.params.id;
+  const userId = (req as any).user.id;
+
+  try {
+    if (!(await isAdmin(userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) return res.status(404).json({ error: "Team not found" });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.teamMember.deleteMany({ where: { teamId } });
+      await tx.joinRequest.deleteMany({ where: { teamId } });
+      await tx.team.delete({ where: { id: teamId } });
+    });
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete team:", error);
+    return res.status(500).json({ error: "Failed to delete team" });
   }
 });
 

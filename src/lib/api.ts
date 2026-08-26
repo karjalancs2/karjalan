@@ -343,6 +343,18 @@ export const api = {
     }
   },
 
+  deleteTeam: async (teamId: string) => {
+    const res = await apiFetch(`/api/teams/${teamId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw apiError(err.error || "Failed to delete team", res.status);
+    }
+    return await res.json();
+  },
+
   // Notifications
   getNotifications: async () => {
     try {

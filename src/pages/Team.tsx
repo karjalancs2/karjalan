@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Shield } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Shield, Trash2 } from "lucide-react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { useAuth } from "../contexts/AuthContext";
+import { api } from "../lib/api";
 import { apiFetch } from "../lib/http";
 import { faceitTierClass } from "../lib/utils";
 
@@ -56,6 +57,7 @@ export default function Team() {
   const { id } = useParams<{ id: string }>();
   const { language } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +69,7 @@ export default function Team() {
   const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(
     null,
   );
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -236,6 +239,34 @@ export default function Team() {
     }
   };
 
+  const deleteTeam = async () => {
+    if (!id || user?.role !== "ADMIN" || deleting) return;
+    if (
+      !window.confirm(
+        language === "fi"
+          ? "Haluatko varmasti poistaa tämän joukkueen?"
+          : "Are you sure you want to delete this team?",
+      )
+    )
+      return;
+
+    setDeleting(true);
+    try {
+      await api.deleteTeam(id);
+      navigate("/teams");
+    } catch (deleteError) {
+      setJoinError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : language === "fi"
+            ? "Joukkueen poisto epäonnistui."
+            : "Failed to delete team.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <Link
@@ -284,6 +315,23 @@ export default function Team() {
                 <div>
                   {language === "fi" ? "Ranking-pistettä" : "Ranking points"}
                 </div>
+                {user?.role === "ADMIN" && (
+                  <button
+                    type="button"
+                    onClick={deleteTeam}
+                    disabled={deleting}
+                    className="mt-4 inline-flex items-center gap-2 border border-red-900/60 px-3 py-2 text-xs font-bold uppercase text-red-400 hover:border-red-500 hover:text-red-300 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deleting
+                      ? language === "fi"
+                        ? "Poistetaan..."
+                        : "Deleting..."
+                      : language === "fi"
+                        ? "Poista joukkue"
+                        : "Delete Team"}
+                  </button>
+                )}
               </div>
             </div>
           </header>

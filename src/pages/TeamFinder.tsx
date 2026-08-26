@@ -583,7 +583,8 @@ export default function TeamFinder() {
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  {(user?.id === lobby.captainId ||
+                  {(user?.role === "ADMIN" ||
+                    user?.id === lobby.captainId ||
                     lobby.slots.some(
                       (s) =>
                         s.userId === user?.id ||
@@ -615,7 +616,7 @@ export default function TeamFinder() {
                       </button>
                     </>
                   )}
-                  {user?.email === "samuelgaffney@outlook.com" && (
+                  {user?.role === "ADMIN" && user?.id !== lobby.captainId && (
                     <button
                       onClick={() => deleteLobby(lobby.id)}
                       className="text-sm font-medium text-red-400 hover:text-red-200 transition-colors bg-neutral-800 px-3 py-1 rounded ml-2"
