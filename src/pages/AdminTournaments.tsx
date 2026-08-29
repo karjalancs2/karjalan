@@ -30,8 +30,11 @@ export default function AdminTournaments() {
           : `${result.tournament.name} is now the active tournament.`,
       );
     } catch (submitError) {
+      const submitStatus = (submitError as { status?: number }).status;
       setError(
-        submitError instanceof Error
+        submitStatus === 404
+          ? "Tournament not found. Please ensure it is a valid FACEIT Tournament ID."
+          : submitError instanceof Error
           ? submitError.message
           : language === "fi"
             ? "FACEIT-turnauksen tuonti epäonnistui."

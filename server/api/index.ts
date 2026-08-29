@@ -302,7 +302,7 @@ apiRouter.post(
       return res.json(await faceitService.importTournament(input));
     } catch (error: any) {
       console.error("Failed to import FACEIT tournament:", error);
-      return res.status(502).json({
+      return res.status(error?.status === 404 ? 404 : 502).json({
         error: error.message || "Failed to import FACEIT tournament",
       });
     }

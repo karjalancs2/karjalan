@@ -31,7 +31,11 @@ export class FaceitService {
       { headers: { Authorization: `Bearer ${this.getApiKey()}` } },
     );
     if (!response.ok) {
-      throw new Error(`FACEIT API returned ${response.status}`);
+      const error = new Error(`FACEIT API returned ${response.status}`) as Error & {
+        status: number;
+      };
+      error.status = response.status;
+      throw error;
     }
     return response.json();
   }
@@ -39,7 +43,7 @@ export class FaceitService {
   private extractTournamentId(input: string) {
     const value = input.trim();
     const match = value.match(
-      /(?:tournament|championship)\/([a-zA-Z0-9-]+)/i,
+      /(?:^|\/)(?:tournament|championship)\/([a-zA-Z0-9-]+)(?:[/?#]|$)/i,
     );
     const id = match?.[1] || value;
     if (!/^[a-zA-Z0-9-]+$/.test(id)) {
@@ -55,9 +59,21 @@ export class FaceitService {
 
     try {
       details = await this.fetchTournamentResource("tournaments", faceitId);
-    } catch {
+    } catch (error: any) {
+      if (error.status && error.status !== 404) throw error;
       resource = "championships";
-      details = await this.fetchTournamentResource("championships", faceitId);
+      try {
+        details = await this.fetchTournamentResource("championships", faceitId);
+      } catch (championshipError: any) {
+        if (championshipError.status === 404) {
+          const notFoundError = new Error(
+            "Tournament not found. Please ensure it is a valid FACEIT Tournament ID.",
+          ) as Error & { status: number };
+          notFoundError.status = 404;
+          throw notFoundError;
+        }
+        throw championshipError;
+      }
     }
 
     const [brackets, matches] = await Promise.all([
@@ -74,7 +90,9 @@ export class FaceitService {
         status: details.status || "upcoming",
         date: details.start_date ? new Date(details.start_date) : null,
         prizePool: Number(details.prize_pool || 0),
-        teamCapacity: Number(details.max_participants || details.max_teams || 64),
+        teamCapacity: Number(
+          details.max_participants || details.max_teams || 64,
+        ),
         format: details.format || "FACEIT",
         faceitId,
         isActive: true,
@@ -123,7 +141,11 @@ export class FaceitService {
       return saved;
     });
 
-    return { tournament, brackets, matches: Array.isArray(matches) ? matches : matches.items || [] };
+    return {
+      tournament,
+      brackets,
+      matches: Array.isArray(matches) ? matches : matches.items || [],
+    };
   }
 
   /**
