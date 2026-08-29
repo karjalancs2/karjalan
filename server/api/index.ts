@@ -309,6 +309,31 @@ apiRouter.post(
   },
 );
 
+apiRouter.delete(
+  "/admin/tournaments/active",
+  authMiddleware,
+  async (req, res) => {
+    const userId = (req as any).user.id;
+    if (!(await isAdmin(userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    try {
+      const result = await prisma.tournament.updateMany({
+        where: { isActive: true },
+        data: { isActive: false },
+      });
+
+      return res.json({ success: true, cleared: result.count > 0 });
+    } catch (error) {
+      console.error("Failed to clear active tournament:", error);
+      return res
+        .status(500)
+        .json({ error: "Failed to clear active tournament" });
+    }
+  },
+);
+
 apiRouter.get("/matches/live", async (_req, res) => {
   const matches = await prisma.match.findMany({ where: { status: "live" } });
   res.json(matches);

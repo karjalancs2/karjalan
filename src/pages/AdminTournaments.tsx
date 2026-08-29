@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../lib/api";
@@ -12,6 +12,7 @@ export default function AdminTournaments() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   if (loading) return null;
   if (user?.role !== "ADMIN") return <Navigate to="/" replace />;
@@ -38,6 +39,41 @@ export default function AdminTournaments() {
       );
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const clearActiveTournament = async () => {
+    const confirmed = window.confirm(
+      language === "fi"
+        ? "Poistetaanko aktiivinen turnaus etusivulta?"
+        : "Clear the active tournament from the homepage?",
+    );
+    if (!confirmed) return;
+
+    setMessage(null);
+    setError(null);
+    setClearing(true);
+    try {
+      const result = await api.clearActiveTournament();
+      setMessage(
+        result.cleared
+          ? language === "fi"
+            ? "Aktiivinen turnaus tyhjennettiin etusivulta."
+            : "The active tournament was cleared from the homepage."
+          : language === "fi"
+            ? "Aktiivista turnausta ei ollut."
+            : "There was no active tournament to clear.",
+      );
+    } catch (clearError) {
+      setError(
+        clearError instanceof Error
+          ? clearError.message
+          : language === "fi"
+            ? "Aktiivisen turnauksen tyhjennys epäonnistui."
+            : "Failed to clear the active tournament.",
+      );
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -90,6 +126,21 @@ export default function AdminTournaments() {
             : language === "fi"
               ? "Tuo FACEIT-turnaus"
               : "Import FACEIT tournament"}
+        </button>
+        <button
+          type="button"
+          onClick={clearActiveTournament}
+          disabled={submitting || clearing}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-red-800 text-red-300 font-bold px-5 py-3 rounded-sm hover:bg-red-950 disabled:opacity-50"
+        >
+          <Trash2 className="w-4 h-4" />
+          {clearing
+            ? language === "fi"
+              ? "Tyhjennetään..."
+              : "Clearing..."
+            : language === "fi"
+              ? "Tyhjennä aktiivinen turnaus"
+              : "Clear active tournament"}
         </button>
         {message && <p className="text-emerald-400 text-sm">{message}</p>}
         {error && <p className="text-red-300 text-sm">{error}</p>}
