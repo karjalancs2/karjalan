@@ -1,6 +1,20 @@
 ﻿import { prisma } from "../../database/prisma";
 import { rankingService } from "../../services/rankingService";
 
+type FaceitError = Error & {
+  status?: number;
+  rawResponse?: string;
+};
+
+function logFaceitError(context: string, error: unknown) {
+  const faceitError = error as FaceitError;
+  console.error(`${context}: ${faceitError.message || String(error)}`);
+  if (faceitError.stack) console.error(faceitError.stack);
+  if (faceitError.rawResponse) {
+    console.error(`FACEIT raw response: ${faceitError.rawResponse}`);
+  }
+}
+
 /**
  * FACEIT Service Abstraction
  * Handles both MOCK and PRODUCTION modes.
@@ -30,14 +44,23 @@ export class FaceitService {
       `https://open.faceit.com/data/v4/${resource}/${encodeURIComponent(faceitId)}${suffix}`,
       { headers: { Authorization: `Bearer ${this.getApiKey()}` } },
     );
+    const rawResponse = await response.text();
     if (!response.ok) {
-      const error = new Error(`FACEIT API returned ${response.status}`) as Error & {
-        status: number;
-      };
+      const error = new Error(`FACEIT API returned ${response.status}`) as FaceitError;
       error.status = response.status;
+      error.rawResponse = rawResponse;
       throw error;
     }
-    return response.json();
+
+    try {
+      return JSON.parse(rawResponse);
+    } catch (error) {
+      const parseError = new Error(
+        `FACEIT API returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      ) as FaceitError;
+      parseError.rawResponse = rawResponse;
+      throw parseError;
+    }
   }
 
   private extractTournamentId(input: string) {
@@ -60,7 +83,10 @@ export class FaceitService {
     try {
       details = await this.fetchTournamentResource("tournaments", faceitId);
     } catch (error: any) {
-      if (error.status && error.status !== 404) throw error;
+      if (error.status && error.status !== 404) {
+        logFaceitError("FACEIT tournament fetch failed", error);
+        throw error;
+      }
       resource = "championships";
       try {
         details = await this.fetchTournamentResource("championships", faceitId);
@@ -68,84 +94,121 @@ export class FaceitService {
         if (championshipError.status === 404) {
           const notFoundError = new Error(
             "Tournament not found. Please ensure it is a valid FACEIT Tournament ID.",
-          ) as Error & { status: number };
+          ) as FaceitError;
           notFoundError.status = 404;
+          notFoundError.rawResponse = championshipError.rawResponse;
+          logFaceitError("FACEIT tournament was not found", notFoundError);
           throw notFoundError;
         }
+        logFaceitError("FACEIT championship fetch failed", championshipError);
         throw championshipError;
       }
     }
 
-    const [brackets, matches] = await Promise.all([
-      this.fetchTournamentResource(resource, faceitId, "/brackets"),
-      this.fetchTournamentResource(resource, faceitId, "/matches"),
-    ]);
+    let brackets: any;
+    let matches: any;
+    try {
+      [brackets, matches] = await Promise.all([
+        this.fetchTournamentResource(resource, faceitId, "/brackets"),
+        this.fetchTournamentResource(resource, faceitId, "/matches"),
+      ]);
+    } catch (error) {
+      logFaceitError("FACEIT bracket or match fetch failed", error);
+      throw error;
+    }
 
-    const tournament = await prisma.$transaction(async (tx) => {
-      await tx.tournament.updateMany({ data: { isActive: false } });
+    try {
+      const tournament = await prisma.$transaction(async (tx) => {
+        await tx.tournament.updateMany({ data: { isActive: false } });
 
-      const existing = await tx.tournament.findFirst({ where: { faceitId } });
-      const data = {
-        name: details.name || `FACEIT Tournament ${faceitId}`,
-        status: details.status || "upcoming",
-        date: details.start_date ? new Date(details.start_date) : null,
-        prizePool: Number(details.prize_pool || 0),
-        teamCapacity: Number(
-          details.max_participants || details.max_teams || 64,
-        ),
-        format: details.format || "FACEIT",
-        faceitId,
-        isActive: true,
-        bracketData: brackets,
-      };
+        const existing = await tx.tournament.findFirst({ where: { faceitId } });
+        const parsedDate = details?.start_date
+          ? new Date(details.start_date)
+          : null;
+        const prizePool = Number(details?.prize_pool);
+        const teamCapacity = Number(
+          details?.max_participants ?? details?.max_teams,
+        );
+        const data = {
+          name:
+            typeof details?.name === "string" && details.name.trim()
+              ? details.name.trim()
+              : `FACEIT Tournament ${faceitId}`,
+          status:
+            typeof details?.status === "string" && details.status.trim()
+              ? details.status
+              : "upcoming",
+          date: parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
+          prizePool: Number.isFinite(prizePool) ? Math.max(0, Math.trunc(prizePool)) : 0,
+          teamCapacity: Number.isFinite(teamCapacity)
+            ? Math.max(1, Math.trunc(teamCapacity))
+            : 64,
+          format:
+            typeof details?.format === "string" && details.format.trim()
+              ? details.format
+              : "FACEIT",
+          faceitId,
+          isActive: true,
+          bracketData: brackets ?? null,
+        };
 
-      const saved = existing
-        ? await tx.tournament.update({ where: { id: existing.id }, data })
-        : await tx.tournament.create({ data });
+        const saved = existing
+          ? await tx.tournament.update({ where: { id: existing.id }, data })
+          : await tx.tournament.create({ data });
 
-      const records = Array.isArray(matches) ? matches : matches.items || [];
-      for (const match of records) {
-        const matchId = match.match_id || match.id;
-        if (!matchId) continue;
-        const factions = match.teams || match.factions || {};
-        const teamIds = Object.values(factions)
-          .map((team: any) => team?.team_id || team?.id)
-          .filter(Boolean) as string[];
-        await tx.match.upsert({
-          where: { faceitId: matchId },
-          create: {
+        const records = Array.isArray(matches)
+          ? matches
+          : Array.isArray(matches?.items)
+            ? matches.items
+            : [];
+        for (const match of records) {
+          const matchId = match?.match_id || match?.id;
+          if (typeof matchId !== "string" || !matchId) continue;
+          const factions = match.teams || match.factions || {};
+          const teamIds = Object.values(factions)
+            .map((team: any) => team?.team_id || team?.id)
+            .filter((teamId): teamId is string => typeof teamId === "string");
+          const team1Score = Number(match.results?.[teamIds[0]]);
+          const team2Score = Number(match.results?.[teamIds[1]]);
+          const scheduledTime = match.scheduled_at
+            ? new Date(match.scheduled_at)
+            : null;
+          const matchData = {
             tournamentId: saved.id,
             faceitId: matchId,
             team1Id: teamIds[0] || null,
             team2Id: teamIds[1] || null,
-            team1Score: Number(match.results?.[teamIds[0]] || 0),
-            team2Score: Number(match.results?.[teamIds[1]] || 0),
-            round: match.round || null,
-            status: match.status || "upcoming",
-            scheduledTime: match.scheduled_at
-              ? new Date(match.scheduled_at)
-              : null,
-          },
-          update: {
-            tournamentId: saved.id,
-            team1Id: teamIds[0] || null,
-            team2Id: teamIds[1] || null,
-            round: match.round || null,
-            status: match.status || "upcoming",
-            scheduledTime: match.scheduled_at
-              ? new Date(match.scheduled_at)
-              : null,
-          },
-        });
-      }
-      return saved;
-    });
+            team1Score: Number.isFinite(team1Score) ? Math.trunc(team1Score) : 0,
+            team2Score: Number.isFinite(team2Score) ? Math.trunc(team2Score) : 0,
+            round: typeof match.round === "string" ? match.round : null,
+            status: typeof match.status === "string" ? match.status : "upcoming",
+            scheduledTime:
+              scheduledTime && !Number.isNaN(scheduledTime.getTime())
+                ? scheduledTime
+                : null,
+          };
+          await tx.match.upsert({
+            where: { faceitId: matchId },
+            create: matchData,
+            update: matchData,
+          });
+        }
+        return saved;
+      });
 
-    return {
-      tournament,
-      brackets,
-      matches: Array.isArray(matches) ? matches : matches.items || [],
-    };
+      return {
+        tournament,
+        brackets,
+        matches: Array.isArray(matches)
+          ? matches
+          : Array.isArray(matches?.items)
+            ? matches.items
+            : [],
+      };
+    } catch (error) {
+      logFaceitError("FACEIT tournament database import failed", error);
+      throw error;
+    }
   }
 
   /**
