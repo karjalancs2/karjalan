@@ -281,7 +281,7 @@ export default function Home() {
                     <p className="text-sm text-neutral-500 mt-2">
                       {Array.isArray(bracket?.matches)
                         ? bracket.matches.length
-                        : bracket?.match_count ?? 0}{" "}
+                        : (bracket?.match_count ?? 0)}{" "}
                       {language === "fi" ? "ottelua" : "matches"}
                     </p>
                   </div>

@@ -299,7 +299,12 @@ apiRouter.post(
     }
 
     try {
-      return res.json(await faceitService.importTournament(input));
+      const imported = await faceitService.importTournament(input);
+      return res.json({
+        ...imported,
+        brackets: Array.isArray(imported.brackets) ? imported.brackets : [],
+        matches: Array.isArray(imported.matches) ? imported.matches : [],
+      });
     } catch (error: any) {
       console.error(
         `Failed to import FACEIT tournament: ${error?.message || String(error)}`,

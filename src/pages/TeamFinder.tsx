@@ -44,6 +44,9 @@ export default function TeamFinder() {
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
 
+  const tournamentList = Array.isArray(tournaments) ? tournaments : [];
+  const lobbyList = Array.isArray(lobbies) ? lobbies : [];
+
   useEffect(() => {
     async function loadData() {
       setLobbies(await api.getLobbies());
@@ -387,7 +390,7 @@ export default function TeamFinder() {
                       ? "Valitse turnaus"
                       : "Select tournament"}
                   </option>
-                  {tournaments.map((tr) => (
+                  {tournamentList.map((tr) => (
                     <option key={tr.id} value={tr.id}>
                       {tr.name}
                     </option>
@@ -549,7 +552,7 @@ export default function TeamFinder() {
 
       {/* Lobbies Grid */}
       <div className="flex flex-col gap-8">
-        {lobbies.map((lobby) => {
+        {lobbyList.map((lobby) => {
           const tournament = getTournament(lobby.tournamentId);
 
           // Prefer authoritative members when present

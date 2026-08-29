@@ -15,6 +15,103 @@ function logFaceitError(context: string, error: unknown) {
   }
 }
 
+function extractItems(payload: any, collectionNames: string[] = []): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data?.items)) return payload.data.items;
+  for (const collectionName of collectionNames) {
+    if (Array.isArray(payload?.[collectionName])) return payload[collectionName];
+    if (Array.isArray(payload?.data?.[collectionName])) {
+      return payload.data[collectionName];
+    }
+  }
+  return [];
+}
+
+function getTeamIds(match: any): string[] {
+  const teams = match?.teams || match?.factions || {};
+  const entries = Array.isArray(teams) ? teams : Object.values(teams);
+  return entries
+    .map((team: any) => team?.team_id || team?.id || team?.team?.id)
+    .filter((teamId): teamId is string => typeof teamId === "string");
+}
+
+function getScore(match: any, teamId: string | undefined): number {
+  if (!teamId) return 0;
+  const results = match?.results;
+  const result = Array.isArray(results)
+    ? results.find((entry: any) => entry?.team_id === teamId)
+    : results?.[teamId];
+  const score = Number(result?.score ?? result ?? 0);
+  return Number.isFinite(score) ? Math.trunc(score) : 0;
+}
+
+function normalizeMatch(match: any): any | null {
+  const faceitId = match?.match_id || match?.id;
+  if (typeof faceitId !== "string" || !faceitId) return null;
+
+  const teamIds = getTeamIds(match);
+  const scheduledTime = match?.scheduled_at
+    ? new Date(match.scheduled_at)
+    : null;
+  const stage =
+    match?.stage_name ||
+    match?.stage ||
+    match?.group_name ||
+    match?.round_name ||
+    (match?.round != null ? `Round ${match.round}` : "Unassigned");
+
+  return {
+    faceitId,
+    team1Id: teamIds[0] || null,
+    team2Id: teamIds[1] || null,
+    team1Score: getScore(match, teamIds[0]),
+    team2Score: getScore(match, teamIds[1]),
+    round: typeof stage === "string" ? stage : "Unassigned",
+    status: typeof match?.status === "string" ? match.status : "upcoming",
+    scheduledTime:
+      scheduledTime && !Number.isNaN(scheduledTime.getTime())
+        ? scheduledTime
+        : null,
+  };
+}
+
+function groupMatchesByStage(matches: any[], stages: any[]): any[] {
+  const groups = new Map<string, any>();
+  const stageNames = new Map<string, string>();
+  for (const stage of stages) {
+    const id = String(stage?.id || stage?.stage_id || stage?.name || "stage");
+    const name =
+      stage?.name || stage?.stage_name || stage?.type || `Stage ${groups.size + 1}`;
+    stageNames.set(id, name);
+    groups.set(id, { id, name, round: name, matches: [] });
+  }
+
+  for (const match of matches) {
+    const stageId = match?.stage_id || match?.stage?.id;
+    const name =
+      (stageId && stageNames.get(String(stageId))) ||
+      match.round ||
+      "Unassigned";
+    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "unassigned";
+    const group = groups.get(id) || {
+      id,
+      name,
+      round: name,
+      matches: [],
+    };
+    group.matches.push({
+      id: match.faceitId,
+      team1Id: match.team1Id,
+      team2Id: match.team2Id,
+      round: match.round,
+    });
+    groups.set(id, group);
+  }
+
+  return Array.from(groups.values()).filter((group) => group.matches.length > 0);
+}
+
 /**
  * FACEIT Service Abstraction
  * Handles both MOCK and PRODUCTION modes.
@@ -125,23 +222,11 @@ export class FaceitService {
       }
     }
 
-    let brackets: any = [];
-    let matches: any = [];
+    let rawMatches: any = [];
+    let stages: any[] = [];
+    let rawSubscriptions: any[] = [];
     try {
-      brackets = await this.fetchTournamentResource(
-        resource,
-        faceitId,
-        "/brackets",
-      );
-    } catch (error) {
-      const faceitError = error as FaceitError;
-      console.warn(
-        `FACEIT brackets unavailable for ${resource}/${faceitId}: ${faceitError.message || String(error)}. Continuing without brackets.`,
-      );
-    }
-
-    try {
-      matches = await this.fetchTournamentResource(
+      rawMatches = await this.fetchTournamentResource(
         resource,
         faceitId,
         "/matches",
@@ -153,6 +238,55 @@ export class FaceitService {
       );
     }
 
+    if (resource === "championships") {
+      try {
+        const rawStages = await this.fetchTournamentResource(
+          resource,
+          faceitId,
+          "/stages",
+        );
+        stages = extractItems(rawStages, ["stages"]);
+      } catch (error) {
+        const faceitError = error as FaceitError;
+        console.warn(
+          `FACEIT stages unavailable for championships/${faceitId}: ${faceitError.message || String(error)}. Grouping matches by round instead.`,
+        );
+      }
+
+      try {
+        const subscriptions = await this.fetchTournamentResource(
+          resource,
+          faceitId,
+          "/subscriptions",
+        );
+        rawSubscriptions = extractItems(subscriptions, ["subscriptions"]);
+      } catch (error) {
+        const faceitError = error as FaceitError;
+        console.warn(
+          `FACEIT subscriptions unavailable for championships/${faceitId}: ${faceitError.message || String(error)}. Continuing without participant data.`,
+        );
+      }
+    } else {
+      try {
+        const rawBrackets = await this.fetchTournamentResource(
+          resource,
+          faceitId,
+          "/brackets",
+        );
+        stages = extractItems(rawBrackets);
+      } catch (error) {
+        const faceitError = error as FaceitError;
+        console.warn(
+          `FACEIT brackets unavailable for tournaments/${faceitId}: ${faceitError.message || String(error)}. Grouping matches by round instead.`,
+        );
+      }
+    }
+
+    const matches = extractItems(rawMatches)
+      .map(normalizeMatch)
+      .filter((match): match is any => match !== null);
+    const brackets = groupMatchesByStage(matches, stages);
+
     try {
       const tournament = await prisma.$transaction(async (tx) => {
         await tx.tournament.updateMany({ data: { isActive: false } });
@@ -163,7 +297,9 @@ export class FaceitService {
           : null;
         const prizePool = Number(details?.prize_pool);
         const teamCapacity = Number(
-          details?.max_participants ?? details?.max_teams,
+          details?.max_participants ??
+            details?.max_teams ??
+            (rawSubscriptions.length > 0 ? rawSubscriptions.length : 64),
         );
         const data = {
           name:
@@ -197,47 +333,20 @@ export class FaceitService {
           ? await tx.tournament.update({ where: { id: existing.id }, data })
           : await tx.tournament.create({ data });
 
-        const records = Array.isArray(matches)
-          ? matches
-          : Array.isArray(matches?.items)
-            ? matches.items
-            : [];
-        for (const match of records) {
-          const matchId = match?.match_id || match?.id;
-          if (typeof matchId !== "string" || !matchId) continue;
-          const factions = match.teams || match.factions || {};
-          const teamIds = Object.values(factions)
-            .map((team: any) => team?.team_id || team?.id)
-            .filter((teamId): teamId is string => typeof teamId === "string");
-          const team1Score = Number(match.results?.[teamIds[0]]);
-          const team2Score = Number(match.results?.[teamIds[1]]);
-          const scheduledTime = match.scheduled_at
-            ? new Date(match.scheduled_at)
-            : null;
+        await tx.match.deleteMany({ where: { tournamentId: saved.id } });
+        for (const match of matches) {
           const matchData = {
             tournamentId: saved.id,
-            faceitId: matchId,
-            team1Id: teamIds[0] || null,
-            team2Id: teamIds[1] || null,
-            team1Score: Number.isFinite(team1Score)
-              ? Math.trunc(team1Score)
-              : 0,
-            team2Score: Number.isFinite(team2Score)
-              ? Math.trunc(team2Score)
-              : 0,
-            round: typeof match.round === "string" ? match.round : null,
-            status:
-              typeof match.status === "string" ? match.status : "upcoming",
-            scheduledTime:
-              scheduledTime && !Number.isNaN(scheduledTime.getTime())
-                ? scheduledTime
-                : null,
+            faceitId: match.faceitId,
+            team1Id: match.team1Id,
+            team2Id: match.team2Id,
+            team1Score: match.team1Score,
+            team2Score: match.team2Score,
+            round: match.round,
+            status: match.status,
+            scheduledTime: match.scheduledTime,
           };
-          await tx.match.upsert({
-            where: { faceitId: matchId },
-            create: matchData,
-            update: matchData,
-          });
+          await tx.match.create({ data: matchData });
         }
         return saved;
       });
@@ -245,11 +354,7 @@ export class FaceitService {
       return {
         tournament,
         brackets,
-        matches: Array.isArray(matches)
-          ? matches
-          : Array.isArray(matches?.items)
-            ? matches.items
-            : [],
+        matches,
       };
     } catch (error) {
       logFaceitError("FACEIT tournament database import failed", error);
