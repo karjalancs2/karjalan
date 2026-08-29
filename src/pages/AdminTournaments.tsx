@@ -4,10 +4,12 @@ import { RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../lib/api";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminTournaments() {
   const { user, loading } = useAuth();
   const { language } = useTranslation();
+  const navigate = useNavigate();
   const [faceitTournament, setFaceitTournament] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,10 +37,10 @@ export default function AdminTournaments() {
         submitStatus === 404
           ? "Tournament not found. Please ensure it is a valid FACEIT Tournament ID."
           : submitError instanceof Error
-          ? submitError.message
-          : language === "fi"
-            ? "FACEIT-turnauksen tuonti epäonnistui."
-            : "FACEIT tournament import failed.",
+            ? submitError.message
+            : language === "fi"
+              ? "FACEIT-turnauksen tuonti epäonnistui."
+              : "FACEIT tournament import failed.",
       );
     } finally {
       setSubmitting(false);
@@ -58,14 +60,14 @@ export default function AdminTournaments() {
     setClearing(true);
     try {
       const result = await api.clearActiveTournament();
+      if (result.cleared) {
+        navigate("/tournaments", { replace: true });
+        return;
+      }
       setMessage(
-        result.cleared
-          ? language === "fi"
-            ? "Aktiivinen turnaus tyhjennettiin etusivulta."
-            : "The active tournament was cleared from the homepage."
-          : language === "fi"
-            ? "Aktiivista turnausta ei ollut."
-            : "There was no active tournament to clear.",
+        language === "fi"
+          ? "Aktiivista turnausta ei ollut."
+          : "There was no active tournament to clear.",
       );
     } catch (clearError) {
       setError(
