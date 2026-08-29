@@ -1,9 +1,17 @@
 import { Request, Response, Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
 import { prisma } from "../database/prisma";
 
 export const authRouter = Router();
+
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+});
 
 const getJwtSecret = (): string => {
   const secret = process.env.JWT_SECRET;
@@ -38,7 +46,7 @@ export const authMiddleware = (req: Request, res: Response, next: Function) => {
   }
 };
 
-authRouter.post("/register", async (req, res) => {
+authRouter.post("/register", authRateLimiter, async (req, res) => {
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {
@@ -82,7 +90,7 @@ authRouter.post("/register", async (req, res) => {
   }
 });
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", authRateLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   try {

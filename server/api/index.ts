@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../database/prisma";
 import { authRouter, authMiddleware } from "../auth";
 import { faceitService } from "../integrations/faceit/faceitService";
+import { sanitizePlainText } from "../lib/sanitize";
 
 export const apiRouter = Router();
 
@@ -428,7 +429,9 @@ apiRouter.get("/lobbies/:id", async (req, res) => {
 
 // CREATE lobby (Authenticated) — require FACEIT profile verification first
 apiRouter.post("/lobbies", authMiddleware, async (req, res) => {
-  const { tournamentId, name, description, faceitUrl } = req.body;
+  const { tournamentId, faceitUrl } = req.body;
+  const name = sanitizePlainText(req.body?.name);
+  const description = sanitizePlainText(req.body?.description) || null;
   const userId = (req as any).user.id;
 
   try {
@@ -607,7 +610,8 @@ apiRouter.post("/lobbies/:id/join", authMiddleware, async (req, res) => {
 // CREATE a join request (Authenticated) — players request to join, captain reviews
 apiRouter.post("/lobbies/:id/requests", authMiddleware, async (req, res) => {
   const { id } = req.params;
-  const { message, slotId } = req.body;
+  const { slotId } = req.body;
+  const message = sanitizePlainText(req.body?.message) || null;
   const userId = (req as any).user.id;
 
   try {
@@ -928,8 +932,10 @@ apiRouter.post(
   authMiddleware,
   async (req, res) => {
     const { id } = req.params;
-    const { content } = req.body;
+    const content = sanitizePlainText(req.body?.content);
     const userId = (req as any).user.id;
+
+    if (!content) return res.status(400).json({ error: "Message is required" });
 
     try {
       // Verify membership (captain or accepted member), or admin access.
@@ -1118,7 +1124,7 @@ apiRouter.delete("/teams/:id", authMiddleware, async (req, res) => {
 
 apiRouter.post("/teams", authMiddleware, async (req, res) => {
   const userId = (req as any).user.id;
-  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const name = sanitizePlainText(req.body?.name);
 
   if (!name) {
     return res.status(400).json({ error: "Joukkueen nimi vaaditaan." });

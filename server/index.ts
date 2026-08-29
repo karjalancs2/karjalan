@@ -4,6 +4,8 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 import { apiRouter } from "./api";
 
@@ -12,6 +14,14 @@ dotenv.config();
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
+
+  if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
+
+  app.use(
+    helmet({
+      frameguard: { action: "deny" },
+    }),
+  );
 
   const configuredOrigins = (process.env.CORS_ORIGIN || "")
     .split(",")
@@ -39,11 +49,19 @@ async function startServer() {
       },
     }),
   );
-  app.use(express.json());
+  app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
 
+  const apiRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    skip: (req) => req.path.startsWith("/auth"),
+  });
+
   // API ROUTES
-  app.use("/api", apiRouter);
+  app.use("/api", apiRateLimiter, apiRouter);
 
   // FACEIT Abstraction Endpoint (legacy example route)
   app.get("/api/faceit/match/:matchId", async (req, res) => {
