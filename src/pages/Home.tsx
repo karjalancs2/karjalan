@@ -57,7 +57,12 @@ export default function Home() {
     : Array.isArray(brackets?.items)
       ? brackets.items
       : [];
-  const hasActiveMatches = liveMatches.length > 0 || upcomingMatches.length > 0;
+  const liveMatchList = Array.isArray(liveMatches) ? liveMatches : [];
+  const upcomingMatchList = Array.isArray(upcomingMatches)
+    ? upcomingMatches
+    : [];
+  const hasActiveMatches =
+    liveMatchList.length > 0 || upcomingMatchList.length > 0;
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -97,7 +102,7 @@ export default function Home() {
       {/* Main Content Area */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col gap-16 sm:gap-24">
         {/* Live Matches */}
-        {liveMatches.length > 0 && (
+        {liveMatchList.length > 0 && (
           <section className="flex flex-col gap-6">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
@@ -107,7 +112,7 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {liveMatches.map((match) => {
+              {liveMatchList.map((match) => {
                 const team1 = getTeam(match?.team1Id);
                 const team2 = getTeam(match?.team2Id);
                 return (
@@ -274,7 +279,9 @@ export default function Home() {
                       {bracket?.name || bracket?.round || `Round ${index + 1}`}
                     </h3>
                     <p className="text-sm text-neutral-500 mt-2">
-                      {bracket?.matches?.length ?? bracket?.match_count ?? 0}{" "}
+                      {Array.isArray(bracket?.matches)
+                        ? bracket.matches.length
+                        : bracket?.match_count ?? 0}{" "}
                       {language === "fi" ? "ottelua" : "matches"}
                     </p>
                   </div>
@@ -295,21 +302,21 @@ export default function Home() {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {upcomingMatches?.map((match) => (
-                <div
-                  key={match?.id || `${match?.team1Id}-${match?.team2Id}`}
-                  className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between"
-                >
-                  <span className="font-semibold">
-                    {match?.team1Id || "TBA"}
-                  </span>
-                  <span className="text-neutral-500 text-sm">
-                    {match?.round || "Match"}
-                  </span>
-                  <span className="font-semibold">
-                    {match?.team2Id || "TBA"}
-                  </span>
-                </div>
+                {upcomingMatchList.map((match) => (
+                  <div
+                    key={match?.id || `${match?.team1Id}-${match?.team2Id}`}
+                    className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between"
+                  >
+                    <span className="font-semibold">
+                      {match?.team1Id || "TBA"}
+                    </span>
+                    <span className="text-neutral-500 text-sm">
+                      {match?.round || "Match"}
+                    </span>
+                    <span className="font-semibold">
+                      {match?.team2Id || "TBA"}
+                    </span>
+                  </div>
                 ))}
               </div>
             )}

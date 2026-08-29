@@ -74,7 +74,9 @@ export const api = {
   getMatchesByTournament: async (id: string) => {
     try {
       const res = await apiFetch(`/api/tournaments/${id}/matches`);
-      return res.ok ? await res.json() : [];
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     } catch {
       return [];
     }
@@ -82,7 +84,9 @@ export const api = {
   getTeams: async () => {
     try {
       const res = await apiFetch("/api/teams");
-      return res.ok ? await res.json() : [];
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     } catch {
       return [];
     }

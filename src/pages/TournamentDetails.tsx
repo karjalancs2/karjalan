@@ -35,7 +35,9 @@ export default function TournamentDetails() {
       </div>
     );
 
-  const getTeam = (teamId: string) => teams.find((t) => t.id === teamId);
+  const teamList = Array.isArray(teams) ? teams : [];
+  const matchList = Array.isArray(matches) ? matches : [];
+  const getTeam = (teamId: string) => teamList.find((t) => t.id === teamId);
 
   return (
     <div className="w-full">
@@ -208,14 +210,14 @@ export default function TournamentDetails() {
 
         {activeTab === "teams" && (
           <div className="space-y-4">
-            {teams.length === 0 ? (
+            {teamList.length === 0 ? (
               <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-8 text-neutral-400">
                 {language === "fi"
                   ? "Ei rekisteröityjä joukkueita vielä."
                   : "No registered teams yet."}
               </div>
             ) : (
-              teams.map((team) => (
+              teamList.map((team) => (
                 <div
                   key={team.id}
                   className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between gap-4"
@@ -238,111 +240,113 @@ export default function TournamentDetails() {
 
         {activeTab === "bracket" && (
           <div className="w-full overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
-            {matches?.length === 0 ? (
+            {matchList.length === 0 ? (
               <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-neutral-400">
                 No bracket data available for this event yet.
               </div>
             ) : (
-            <div className="min-w-[800px] flex gap-16">
-              {/* Visual Bracket Implementation */}
-              <div className="flex flex-col gap-4 justify-center">
-                <h3 className="text-xs font-bold text-neutral-500 uppercase mb-4 text-center">
-                  Puolivälierät
-                </h3>
-                {matches?.map((m) => {
-                  const t1 = getTeam(m?.team1Id);
-                  const t2 = getTeam(m?.team2Id);
-                  return (
-                    <div
-                      key={m?.id}
-                      className="bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden relative"
-                    >
-                      <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
-                      <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
-                        <span>{t1?.name || "TBA"}</span>
-                        <span
-                          className={
-                            (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
-                              ? "text-white"
-                              : "text-neutral-500"
-                          }
-                        >
-                          {m?.team1Score ?? 0}
-                        </span>
+              <div className="min-w-[800px] flex gap-16">
+                {/* Visual Bracket Implementation */}
+                <div className="flex flex-col gap-4 justify-center">
+                  <h3 className="text-xs font-bold text-neutral-500 uppercase mb-4 text-center">
+                    Puolivälierät
+                  </h3>
+                  {matchList.map((m) => {
+                    const t1 = getTeam(m?.team1Id);
+                    const t2 = getTeam(m?.team2Id);
+                    return (
+                      <div
+                        key={m?.id}
+                        className="bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden relative"
+                      >
+                        <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
+                        <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
+                          <span>{t1?.name || "TBA"}</span>
+                          <span
+                            className={
+                              (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
+                                ? "text-white"
+                                : "text-neutral-500"
+                            }
+                          >
+                            {m?.team1Score ?? 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
+                          <span>{t2?.name || "TBA"}</span>
+                          <span
+                            className={
+                              (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
+                                ? "text-white"
+                                : "text-neutral-500"
+                            }
+                          >
+                            {m?.team2Score ?? 0}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
-                        <span>{t2?.name || "TBA"}</span>
-                        <span
-                          className={
-                            (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
-                              ? "text-white"
-                              : "text-neutral-500"
-                          }
-                        >
-                          {m?.team2Score ?? 0}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              <div className="flex flex-col gap-4 justify-center relative">
-                <h3 className="text-xs font-bold text-neutral-500 uppercase mb-4 text-center">
-                  Välierät
-                </h3>
-                <div className="absolute -left-8 top-1/2 w-8 h-px bg-neutral-700"></div>
-                <div className="bg-neutral-900/50 border border-neutral-800 border-dashed rounded w-64 text-sm font-medium overflow-hidden">
-                  <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800 text-neutral-600">
-                    <span>TBA</span>
-                    <span>-</span>
-                  </div>
-                  <div className="flex justify-between items-center px-4 py-2 bg-neutral-950/50 text-neutral-600">
-                    <span>TBA</span>
-                    <span>-</span>
+                <div className="flex flex-col gap-4 justify-center relative">
+                  <h3 className="text-xs font-bold text-neutral-500 uppercase mb-4 text-center">
+                    Välierät
+                  </h3>
+                  <div className="absolute -left-8 top-1/2 w-8 h-px bg-neutral-700"></div>
+                  <div className="bg-neutral-900/50 border border-neutral-800 border-dashed rounded w-64 text-sm font-medium overflow-hidden">
+                    <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800 text-neutral-600">
+                      <span>TBA</span>
+                      <span>-</span>
+                    </div>
+                    <div className="flex justify-between items-center px-4 py-2 bg-neutral-950/50 text-neutral-600">
+                      <span>TBA</span>
+                      <span>-</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
             )}
           </div>
         )}
 
         {activeTab === "matches" && (
           <div className="flex flex-col gap-4">
-            {matches?.length === 0 ? (
+            {matchList.length === 0 ? (
               <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-neutral-400">
                 No match data available for this event yet.
               </div>
-            ) : matches?.map((match) => {
-              const team1 = getTeam(match?.team1Id);
-              const team2 = getTeam(match?.team2Id);
-              return (
-                <div
-                  key={match?.id}
-                  className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 flex items-center justify-between hover:border-neutral-700 transition-colors"
-                >
-                  <div className="flex items-center gap-8 w-full max-w-2xl mx-auto">
-                    <div className="flex-1 text-right font-bold text-lg">
-                      {team1?.name}
-                    </div>
-                    <div className="flex flex-col items-center justify-center min-w-[100px]">
-                      <div className="text-xs font-medium text-neutral-500 mb-1">
-                        {match?.map || "-"}
+            ) : (
+              matchList.map((match) => {
+                const team1 = getTeam(match?.team1Id);
+                const team2 = getTeam(match?.team2Id);
+                return (
+                  <div
+                    key={match?.id}
+                    className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 flex items-center justify-between hover:border-neutral-700 transition-colors"
+                  >
+                    <div className="flex items-center gap-8 w-full max-w-2xl mx-auto">
+                      <div className="flex-1 text-right font-bold text-lg">
+                        {team1?.name}
                       </div>
-                      <div className="text-3xl font-extrabold tracking-tighter bg-neutral-950 px-4 py-2 rounded border border-neutral-800">
-                        {match?.team1Score ?? 0}{" "}
-                        <span className="text-neutral-700">-</span>{" "}
-                        {match?.team2Score ?? 0}
+                      <div className="flex flex-col items-center justify-center min-w-[100px]">
+                        <div className="text-xs font-medium text-neutral-500 mb-1">
+                          {match?.map || "-"}
+                        </div>
+                        <div className="text-3xl font-extrabold tracking-tighter bg-neutral-950 px-4 py-2 rounded border border-neutral-800">
+                          {match?.team1Score ?? 0}{" "}
+                          <span className="text-neutral-700">-</span>{" "}
+                          {match?.team2Score ?? 0}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-1 text-left font-bold text-lg">
-                      {team2?.name}
+                      <div className="flex-1 text-left font-bold text-lg">
+                        {team2?.name}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         )}
       </div>
