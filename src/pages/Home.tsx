@@ -27,17 +27,22 @@ export default function Home() {
     async function loadData() {
       const active = await api.getActiveTournament();
       setFeaturedTournament(active?.tournament || null);
-      setBrackets(active?.brackets || null);
-      const activeMatches = active?.matches || [];
+      setBrackets(active?.brackets ?? null);
+      const activeMatches = Array.isArray(active?.matches)
+        ? active.matches
+        : Array.isArray(active?.matches?.items)
+          ? active.matches.items
+          : [];
       setLiveMatches(
         activeMatches.filter(
-          (match: Match) => match.status.toLowerCase() === "live",
+          (match: Match | null | undefined) =>
+            match?.status?.toLowerCase() === "live",
         ),
       );
       setUpcomingMatches(
-        activeMatches.filter((match: Match) =>
+        activeMatches.filter((match: Match | null | undefined) =>
           ["upcoming", "scheduled", "ready"].includes(
-            match.status.toLowerCase(),
+            match?.status?.toLowerCase() ?? "",
           ),
         ),
       );
@@ -47,6 +52,12 @@ export default function Home() {
   }, []);
 
   const getTeam = (id: string) => teams.find((t) => t.id === id);
+  const bracketItems = Array.isArray(brackets)
+    ? brackets
+    : Array.isArray(brackets?.items)
+      ? brackets.items
+      : [];
+  const hasActiveMatches = liveMatches.length > 0 || upcomingMatches.length > 0;
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -97,8 +108,8 @@ export default function Home() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {liveMatches.map((match) => {
-                const team1 = getTeam(match.team1Id);
-                const team2 = getTeam(match.team2Id);
+                const team1 = getTeam(match?.team1Id);
+                const team2 = getTeam(match?.team2Id);
                 return (
                   <div
                     key={match.id}
@@ -106,12 +117,12 @@ export default function Home() {
                   >
                     <div className="px-4 py-2 bg-neutral-950 border-b border-neutral-800 flex justify-between items-center text-xs text-neutral-400 font-medium">
                       <span>
-                        {match.tournamentId === "tr1"
+                        {match?.tournamentId === "tr1"
                           ? "Karjalan CS2 Cup #1"
                           : "Turnaus"}{" "}
-                        — {match.round}
+                        — {match?.round || "Match"}
                       </span>
-                      <span>{match.map}</span>
+                      <span>{match?.map || "-"}</span>
                     </div>
                     <div className="p-4 sm:p-6 flex items-center justify-between gap-2">
                       {/* Team 1 */}
@@ -129,22 +140,24 @@ export default function Home() {
                         <div className="text-3xl sm:text-4xl font-bold tracking-tighter flex items-center gap-2 sm:gap-3">
                           <span
                             className={
-                              match.team1Score > match.team2Score
+                              (match?.team1Score ?? 0) >
+                              (match?.team2Score ?? 0)
                                 ? "text-white"
                                 : "text-neutral-500"
                             }
                           >
-                            {match.team1Score}
+                            {match?.team1Score ?? 0}
                           </span>
                           <span className="text-neutral-700 text-xl">-</span>
                           <span
                             className={
-                              match.team2Score > match.team1Score
+                              (match?.team2Score ?? 0) >
+                              (match?.team1Score ?? 0)
                                 ? "text-white"
                                 : "text-neutral-500"
                             }
                           >
-                            {match.team2Score}
+                            {match?.team2Score ?? 0}
                           </span>
                         </div>
                         <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded flex items-center gap-1">
@@ -163,7 +176,7 @@ export default function Home() {
                         </span>
                       </div>
                     </div>
-                    {match.streamUrl && (
+                    {match?.streamUrl && (
                       <div className="px-6 py-3 bg-neutral-900 border-t border-neutral-800 flex justify-center">
                         <a
                           href={match.streamUrl}
@@ -241,55 +254,65 @@ export default function Home() {
           </section>
         )}
 
-        {featuredTournament && brackets && (
+        {featuredTournament && (
           <section className="flex flex-col gap-6">
             <h2 className="text-2xl font-bold tracking-wide uppercase">
               {language === "fi" ? "Turnauskaavio" : "Tournament bracket"}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(Array.isArray(brackets) ? brackets : brackets.items || []).map(
-                (bracket: any, index: number) => (
+            {bracketItems.length === 0 ? (
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-neutral-400">
+                No bracket data available for this event yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {bracketItems?.map((bracket: any, index: number) => (
                   <div
-                    key={bracket.id || index}
+                    key={bracket?.id || index}
                     className="bg-neutral-900 border border-neutral-800 rounded-lg p-5"
                   >
                     <h3 className="font-bold">
-                      {bracket.name || bracket.round || `Round ${index + 1}`}
+                      {bracket?.name || bracket?.round || `Round ${index + 1}`}
                     </h3>
                     <p className="text-sm text-neutral-500 mt-2">
-                      {bracket.matches?.length ?? bracket.match_count ?? 0}{" "}
+                      {bracket?.matches?.length ?? bracket?.match_count ?? 0}{" "}
                       {language === "fi" ? "ottelua" : "matches"}
                     </p>
                   </div>
-                ),
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
-        {upcomingMatches.length > 0 && (
+        {featuredTournament && (
           <section className="flex flex-col gap-6">
             <h2 className="text-2xl font-bold tracking-wide uppercase">
               {language === "fi" ? "Tulevat ottelut" : "Upcoming matches"}
             </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {upcomingMatches.map((match) => (
+            {!hasActiveMatches ? (
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-neutral-400">
+                No match data available for this event yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {upcomingMatches?.map((match) => (
                 <div
-                  key={match.id}
+                  key={match?.id || `${match?.team1Id}-${match?.team2Id}`}
                   className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between"
                 >
                   <span className="font-semibold">
-                    {match.team1Id || "TBA"}
+                    {match?.team1Id || "TBA"}
                   </span>
                   <span className="text-neutral-500 text-sm">
-                    {match.round || "Match"}
+                    {match?.round || "Match"}
                   </span>
                   <span className="font-semibold">
-                    {match.team2Id || "TBA"}
+                    {match?.team2Id || "TBA"}
                   </span>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 

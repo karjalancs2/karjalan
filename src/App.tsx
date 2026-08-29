@@ -4,6 +4,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./contexts/AuthContext";
 import { ReactNode } from "react";
 import { Layout } from "./components/Layout";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Pages
 import Home from "./pages/Home";
@@ -35,7 +36,8 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Layout>
-            <Routes>
+            <ErrorBoundary>
+              <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/tournaments" element={<Tournaments />} />
               <Route path="/tournaments/:id" element={<TournamentDetails />} />
@@ -62,7 +64,8 @@ export default function App() {
               <Route path="/login" element={<Auth />} />
               <Route path="/register" element={<Auth />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
+              </Routes>
+            </ErrorBoundary>
           </Layout>
         </BrowserRouter>
       </AuthProvider>
