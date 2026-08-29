@@ -324,52 +324,13 @@ apiRouter.delete(
     }
 
     try {
-      const result = await prisma.$transaction(async (tx) => {
-        const activeTournaments = await tx.tournament.findMany({
-          where: { isActive: true },
-          select: { id: true },
-        });
-        const tournamentIds = activeTournaments.map((tournament) => tournament.id);
+      const result = await prisma.tournament.deleteMany({});
 
-        if (tournamentIds.length === 0) return 0;
-
-        const lobbies = await tx.lobby.findMany({
-          where: { tournamentId: { in: tournamentIds } },
-          select: { id: true },
-        });
-        const lobbyIds = lobbies.map((lobby) => lobby.id);
-
-        await tx.match.deleteMany({
-          where: { tournamentId: { in: tournamentIds } },
-        });
-        if (lobbyIds.length > 0) {
-          await tx.notification.deleteMany({
-            where: { lobbyId: { in: lobbyIds } },
-          });
-          await tx.lobbyChatMessage.deleteMany({
-            where: { lobbyId: { in: lobbyIds } },
-          });
-          await tx.lobbyRequest.deleteMany({
-            where: { lobbyId: { in: lobbyIds } },
-          });
-          await tx.lobbySlot.deleteMany({
-            where: { lobbyId: { in: lobbyIds } },
-          });
-          await tx.lobbyMember.deleteMany({
-            where: { lobbyId: { in: lobbyIds } },
-          });
-          await tx.lobby.deleteMany({
-            where: { id: { in: lobbyIds } },
-          });
-        }
-
-        const deletedTournaments = await tx.tournament.deleteMany({
-          where: { id: { in: tournamentIds } },
-        });
-        return deletedTournaments.count;
+      return res.json({
+        success: true,
+        cleared: result.count > 0,
+        deleted: result.count,
       });
-
-      return res.json({ success: true, cleared: result > 0, deleted: result });
     } catch (error) {
       console.error("Failed to clear active tournament:", error);
       return res

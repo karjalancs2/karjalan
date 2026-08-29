@@ -113,7 +113,7 @@ model Lobby {
   status        String      @default("forming")
   description   String?
   
-  tournament    Tournament  @relation(fields: [tournamentId], references: [id])
+  tournament    Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   captain       User        @relation("LobbyCaptain", fields: [captainId], references: [id])
   slots         LobbySlot[]
   requests      LobbyRequest[]
@@ -133,7 +133,7 @@ model LobbySlot {
   minFaceitLevel Int?
   slotIndex     Int
   
-  lobby         Lobby   @relation(fields: [lobbyId], references: [id])
+  lobby         Lobby   @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
   user          User?   @relation(fields: [userId], references: [id])
   
   createdAt     DateTime @default(now())
@@ -150,7 +150,7 @@ model LobbyMember {
   status          String        @default("active")
   joinedAt        DateTime      @default(now())
 
-  lobby           Lobby         @relation(fields: [lobbyId], references: [id])
+  lobby           Lobby         @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
   user            User          @relation(fields: [userId], references: [id])
   faceitProfile   FaceitProfile? @relation(fields: [faceitProfileId], references: [id])
 
@@ -165,7 +165,7 @@ model LobbyRequest {
   status     String   @default("pending") // pending, accepted, rejected
   message    String?
 
-  lobby      Lobby    @relation(fields: [lobbyId], references: [id])
+  lobby      Lobby    @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id])
 
   createdAt  DateTime @default(now())
@@ -178,7 +178,7 @@ model LobbyChatMessage {
   userId    String
   content   String
 
-  lobby     Lobby    @relation(fields: [lobbyId], references: [id])
+  lobby     Lobby    @relation(fields: [lobbyId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
@@ -227,7 +227,7 @@ model Match {
   faceitId      String?   @unique
   scheduledTime DateTime?
   
-  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
