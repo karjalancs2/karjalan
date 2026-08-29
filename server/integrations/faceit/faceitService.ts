@@ -125,16 +125,32 @@ export class FaceitService {
       }
     }
 
-    let brackets: any;
-    let matches: any;
+    let brackets: any = [];
+    let matches: any = [];
     try {
-      [brackets, matches] = await Promise.all([
-        this.fetchTournamentResource(resource, faceitId, "/brackets"),
-        this.fetchTournamentResource(resource, faceitId, "/matches"),
-      ]);
+      brackets = await this.fetchTournamentResource(
+        resource,
+        faceitId,
+        "/brackets",
+      );
     } catch (error) {
-      logFaceitError("FACEIT bracket or match fetch failed", error);
-      throw error;
+      const faceitError = error as FaceitError;
+      console.warn(
+        `FACEIT brackets unavailable for ${resource}/${faceitId}: ${faceitError.message || String(error)}. Continuing without brackets.`,
+      );
+    }
+
+    try {
+      matches = await this.fetchTournamentResource(
+        resource,
+        faceitId,
+        "/matches",
+      );
+    } catch (error) {
+      const faceitError = error as FaceitError;
+      console.warn(
+        `FACEIT matches unavailable for ${resource}/${faceitId}: ${faceitError.message || String(error)}. Continuing without matches.`,
+      );
     }
 
     try {
@@ -174,7 +190,7 @@ export class FaceitService {
               : "FACEIT",
           faceitId,
           isActive: true,
-          bracketData: brackets ?? null,
+          bracketData: brackets,
         };
 
         const saved = existing
