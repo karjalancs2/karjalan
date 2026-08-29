@@ -46,7 +46,9 @@ export class FaceitService {
     );
     const rawResponse = await response.text();
     if (!response.ok) {
-      const error = new Error(`FACEIT API returned ${response.status}`) as FaceitError;
+      const error = new Error(
+        `FACEIT API returned ${response.status}`,
+      ) as FaceitError;
       error.status = response.status;
       error.rawResponse = rawResponse;
       throw error;
@@ -63,7 +65,11 @@ export class FaceitService {
     }
   }
 
-  private extractTournamentId(input: string) {
+  private extractTournamentReference(input: string): {
+    id: string;
+    resource: "tournaments" | "championships";
+    hasResourceHint: boolean;
+  } {
     const value = input.trim();
     const match = value.match(
       /(?:^|\/)(?:tournament|championship)\/([a-zA-Z0-9-]+)(?:[/?#]|$)/i,
@@ -72,20 +78,34 @@ export class FaceitService {
     if (!/^[a-zA-Z0-9-]+$/.test(id)) {
       throw new Error("Invalid FACEIT tournament ID or URL");
     }
-    return id;
+
+    const resource = /\/championship\//i.test(value)
+      ? "championships"
+      : "tournaments";
+    return { id, resource, hasResourceHint: Boolean(match) };
   }
 
   async importTournament(input: string) {
-    const faceitId = this.extractTournamentId(input);
-    let resource: "tournaments" | "championships" = "tournaments";
+    const reference = this.extractTournamentReference(input);
+    const faceitId = reference.id;
+    let resource = reference.resource;
     let details: any;
 
     try {
-      details = await this.fetchTournamentResource("tournaments", faceitId);
+      details = await this.fetchTournamentResource(resource, faceitId);
     } catch (error: any) {
-      if (error.status && error.status !== 404) {
+      if (error.status !== 404) {
         logFaceitError("FACEIT tournament fetch failed", error);
         throw error;
+      }
+      if (reference.hasResourceHint) {
+        const notFoundError = new Error(
+          "Tournament not found. Please ensure it is a valid FACEIT Tournament ID.",
+        ) as FaceitError;
+        notFoundError.status = 404;
+        notFoundError.rawResponse = error.rawResponse;
+        logFaceitError("FACEIT tournament was not found", notFoundError);
+        throw notFoundError;
       }
       resource = "championships";
       try {
@@ -138,8 +158,13 @@ export class FaceitService {
             typeof details?.status === "string" && details.status.trim()
               ? details.status
               : "upcoming",
-          date: parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
-          prizePool: Number.isFinite(prizePool) ? Math.max(0, Math.trunc(prizePool)) : 0,
+          date:
+            parsedDate && !Number.isNaN(parsedDate.getTime())
+              ? parsedDate
+              : null,
+          prizePool: Number.isFinite(prizePool)
+            ? Math.max(0, Math.trunc(prizePool))
+            : 0,
           teamCapacity: Number.isFinite(teamCapacity)
             ? Math.max(1, Math.trunc(teamCapacity))
             : 64,
@@ -178,10 +203,15 @@ export class FaceitService {
             faceitId: matchId,
             team1Id: teamIds[0] || null,
             team2Id: teamIds[1] || null,
-            team1Score: Number.isFinite(team1Score) ? Math.trunc(team1Score) : 0,
-            team2Score: Number.isFinite(team2Score) ? Math.trunc(team2Score) : 0,
+            team1Score: Number.isFinite(team1Score)
+              ? Math.trunc(team1Score)
+              : 0,
+            team2Score: Number.isFinite(team2Score)
+              ? Math.trunc(team2Score)
+              : 0,
             round: typeof match.round === "string" ? match.round : null,
-            status: typeof match.status === "string" ? match.status : "upcoming",
+            status:
+              typeof match.status === "string" ? match.status : "upcoming",
             scheduledTime:
               scheduledTime && !Number.isNaN(scheduledTime.getTime())
                 ? scheduledTime
