@@ -39,13 +39,18 @@ export const api = {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok)
-      throw apiError(data.error || "Failed to clear active tournament", res.status);
+      throw apiError(
+        data.error || "Failed to clear active tournament",
+        res.status,
+      );
     return data;
   },
   getTournaments: async () => {
     try {
       const res = await apiFetch("/api/tournaments");
-      return res.ok ? await res.json() : [];
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     } catch {
       return [];
     }
