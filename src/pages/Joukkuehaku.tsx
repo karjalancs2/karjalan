@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Users } from "lucide-react";
 import { useTranslation } from "../contexts/TranslationContext";
-import { faceitTierClass } from "../lib/utils";
+import { faceitTierClass, safeString } from "../lib/utils";
 import { apiFetch } from "../lib/http";
 
 type FaceitProfile = {
@@ -121,9 +121,9 @@ export default function Joukkuehaku() {
                 </div>
 
                 <div className="flex items-center gap-3 mt-auto mb-6">
-                  {profile?.avatar ? (
+                  {safeString(profile?.avatar) ? (
                     <img
-                      src={profile.avatar}
+                      src={safeString(profile?.avatar, "#")}
                       alt={profile.username}
                       className="w-11 h-11 rounded-full object-cover border border-neutral-700"
                     />

@@ -4,7 +4,7 @@ import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../lib/api";
 import { User, Team } from "../types";
 import { Crosshair, Award, ImageOff } from "lucide-react";
-import { faceitTierClass } from "../lib/utils";
+import { faceitTierClass, safeString } from "../lib/utils";
 
 export default function Profile() {
   const { id } = useParams<{ id: string }>();
@@ -37,9 +37,9 @@ export default function Profile() {
       {/* Header */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 sm:p-8 flex flex-col md:flex-row items-center md:items-start gap-5 sm:gap-8 relative overflow-hidden">
         <div className="w-24 h-24 sm:w-32 sm:h-32 bg-neutral-800 border-2 border-neutral-700 rounded-lg flex items-center justify-center text-4xl font-bold shadow-xl z-10 overflow-hidden">
-          {user.faceitAvatar ? (
+          {safeString(user?.faceitAvatar) ? (
             <img
-              src={user.faceitAvatar}
+              src={safeString(user?.faceitAvatar, "#")}
               alt={user.username}
               className="w-full h-full object-cover"
             />
@@ -90,9 +90,9 @@ export default function Profile() {
               </h3>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-neutral-950 border border-neutral-800 rounded flex items-center justify-center font-bold">
-                  {team.logo ? (
+                  {safeString(team?.logo) ? (
                     <img
-                      src={team.logo}
+                      src={safeString(team?.logo, "#")}
                       alt={team.name}
                       className="w-full h-full object-cover"
                     />

@@ -5,7 +5,7 @@ import { TeamLobby, User, Tournament } from "../types";
 import { Users, Filter, Plus, Shield, Crosshair } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { faceitTierClass } from "../lib/utils";
+import { faceitTierClass, safeString } from "../lib/utils";
 
 export default function TeamFinder() {
   const { t, language } = useTranslation();
@@ -776,9 +776,9 @@ export default function TeamFinder() {
                               P{idx + 1}
                             </span>
                             <div className="w-12 h-12 bg-neutral-800 rounded-full flex items-center justify-center font-bold text-xl border border-neutral-700 group-hover:border-neutral-500 transition-colors overflow-hidden">
-                              {player?.faceitAvatar || player?.avatar ? (
+                              {safeString(player?.faceitAvatar || player?.avatar) ? (
                                 <img
-                                  src={player.faceitAvatar || player.avatar}
+                                  src={safeString(player?.faceitAvatar || player?.avatar, "#")}
                                   alt=""
                                   className="w-full h-full object-cover"
                                 />

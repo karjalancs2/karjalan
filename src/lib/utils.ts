@@ -5,6 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function safeString(value: unknown, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
 export function faceitTierClass(level?: number | null, elo?: number | null) {
   if ((elo ?? 0) >= 2000 || (level ?? 0) >= 10) {
     return "text-red-500 bg-red-500/10";

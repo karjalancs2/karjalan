@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fi, enUS } from "date-fns/locale";
+import { safeString } from "../lib/utils";
 
 export default function Home() {
   const { t, language } = useTranslation();
@@ -181,10 +182,10 @@ export default function Home() {
                         </span>
                       </div>
                     </div>
-                    {match?.streamUrl && (
+                    {safeString(match?.streamUrl) && (
                       <div className="px-6 py-3 bg-neutral-900 border-t border-neutral-800 flex justify-center">
                         <a
-                          href={match.streamUrl}
+                          href={safeString(match?.streamUrl, "#")}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm font-semibold text-purple-400 flex items-center gap-2 hover:text-purple-300 transition-colors"

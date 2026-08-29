@@ -5,7 +5,7 @@ import { useTranslation } from "../contexts/TranslationContext";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
 import { apiFetch } from "../lib/http";
-import { faceitTierClass } from "../lib/utils";
+import { faceitTierClass, safeString } from "../lib/utils";
 
 type FaceitProfile = {
   id: string;
@@ -395,7 +395,7 @@ export default function Team() {
                 }
 
                 const profile = member.faceitProfile;
-                const avatar = member.user.faceitAvatar || profile?.avatar;
+                const avatar = safeString(member.user?.faceitAvatar || profile?.avatar);
                 const level = member.user.faceitLevel ?? profile?.level;
                 const elo = member.user.faceitElo ?? profile?.elo;
                 return (
@@ -413,9 +413,9 @@ export default function Team() {
                           : "PLAYER"}
                       </span>
                     </div>
-                    {avatar ? (
+                      {safeString(avatar) ? (
                       <img
-                        src={avatar}
+                          src={safeString(avatar, "#")}
                         alt={member.user.username}
                         className="w-16 h-16 rounded-full object-cover mb-4 border border-neutral-700"
                       />
@@ -479,9 +479,9 @@ export default function Team() {
                       key={request.id}
                       className="border border-neutral-800 bg-neutral-900 rounded-sm p-4 flex items-center gap-4"
                     >
-                      {profile?.avatar ? (
+                      {safeString(profile?.avatar) ? (
                         <img
-                          src={profile.avatar}
+                          src={safeString(profile?.avatar, "#")}
                           alt={profile.username}
                           className="w-12 h-12 rounded-full object-cover border border-neutral-700"
                         />

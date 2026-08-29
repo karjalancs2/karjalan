@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
+import { safeString } from "../lib/utils";
 import { Search, Menu, UserCircle, Twitch, X } from "lucide-react";
 import { KarjalanMark } from "./KarjalanMark";
 
@@ -39,7 +40,10 @@ export function Navbar() {
       setSearchLoading(true);
       try {
         const results = await api.search(query);
-        setSearchResults({ teams: results.teams ?? [], players: results.players ?? [] });
+        setSearchResults({
+          teams: results.teams ?? [],
+          players: results.players ?? [],
+        });
       } catch {
         setSearchResults({ teams: [], players: [] });
       } finally {
@@ -261,7 +265,10 @@ export function Navbar() {
         )}
       </div>
       {searchOpen && (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/70 px-4 pt-20 sm:pt-28" onClick={closeSearch}>
+        <div
+          className="fixed inset-0 z-[60] flex items-start justify-center bg-black/70 px-4 pt-20 sm:pt-28"
+          onClick={closeSearch}
+        >
           <div
             className="w-full max-w-2xl overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
@@ -278,23 +285,46 @@ export function Navbar() {
                 placeholder="Search teams or players"
                 className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-neutral-500"
               />
-              <button type="button" onClick={closeSearch} className="p-1 text-neutral-500 hover:text-white" aria-label="Close search">
+              <button
+                type="button"
+                onClick={closeSearch}
+                className="p-1 text-neutral-500 hover:text-white"
+                aria-label="Close search"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="max-h-[65vh] overflow-y-auto p-4">
-              {searchLoading && <p className="py-4 text-sm text-neutral-500">Searching...</p>}
-              {!searchLoading && searchQuery.trim() && searchResults.teams.length === 0 && searchResults.players.length === 0 && (
-                <p className="py-4 text-sm text-neutral-500">No results found.</p>
+              {searchLoading && (
+                <p className="py-4 text-sm text-neutral-500">Searching...</p>
               )}
+              {!searchLoading &&
+                searchQuery.trim() &&
+                searchResults.teams.length === 0 &&
+                searchResults.players.length === 0 && (
+                  <p className="py-4 text-sm text-neutral-500">
+                    No results found.
+                  </p>
+                )}
               {searchResults.teams.length > 0 && (
                 <section>
-                  <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Teams</h2>
+                  <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">
+                    Teams
+                  </h2>
                   <div className="flex flex-col">
                     {searchResults.teams.map((team) => (
-                      <button key={team.id} type="button" onClick={() => openResult(`/teams/${team.id}`)} className="flex items-center gap-3 rounded px-3 py-3 text-left hover:bg-neutral-800">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-neutral-800 text-xs font-bold text-neutral-400">{team.name.slice(0, 2).toUpperCase()}</span>
-                        <span className="font-semibold text-white">{team.name}</span>
+                      <button
+                        key={team.id}
+                        type="button"
+                        onClick={() => openResult(`/teams/${team.id}`)}
+                        className="flex items-center gap-3 rounded px-3 py-3 text-left hover:bg-neutral-800"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-neutral-800 text-xs font-bold text-neutral-400">
+                          {team.name.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="font-semibold text-white">
+                          {team.name}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -302,14 +332,35 @@ export function Navbar() {
               )}
               {searchResults.players.length > 0 && (
                 <section className="mt-5">
-                  <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">Players</h2>
+                  <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500">
+                    Players
+                  </h2>
                   <div className="flex flex-col">
                     {searchResults.players.map((player) => (
-                      <button key={player.id} type="button" onClick={() => openResult(`/profile/${player.id}`)} className="flex items-center gap-3 rounded px-3 py-3 text-left hover:bg-neutral-800">
-                        {player.faceitAvatar ? <img src={player.faceitAvatar} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" /> : <UserCircle className="h-9 w-9 shrink-0 text-neutral-500" />}
+                      <button
+                        key={player.id}
+                        type="button"
+                        onClick={() => openResult(`/profile/${player.id}`)}
+                        className="flex items-center gap-3 rounded px-3 py-3 text-left hover:bg-neutral-800"
+                      >
+                          {safeString(player?.faceitAvatar) ? (
+                          <img
+                              src={safeString(player?.faceitAvatar, "#")}
+                            alt=""
+                            className="h-9 w-9 shrink-0 rounded-full object-cover"
+                          />
+                        ) : (
+                          <UserCircle className="h-9 w-9 shrink-0 text-neutral-500" />
+                        )}
                         <span>
-                          <span className="block font-semibold text-white">{player.username}</span>
-                          {player.faceitUsername && <span className="block text-xs text-neutral-500">FACEIT: {player.faceitUsername}</span>}
+                          <span className="block font-semibold text-white">
+                            {player.username}
+                          </span>
+                          {player.faceitUsername && (
+                            <span className="block text-xs text-neutral-500">
+                              FACEIT: {player.faceitUsername}
+                            </span>
+                          )}
                         </span>
                       </button>
                     ))}
