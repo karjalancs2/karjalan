@@ -294,7 +294,7 @@ export class FaceitService {
       rawMatches && typeof rawMatches === "object" && !Array.isArray(rawMatches)
         ? rawMatches
         : { data: { items: Array.isArray(rawMatches) ? rawMatches : [] } };
-    const safeMatches = response.data.items || [];
+    const safeMatches = response?.data?.items || response?.items || [];
     const matches = Array.isArray(safeMatches)
       ? safeMatches
           .map(normalizeMatch)
