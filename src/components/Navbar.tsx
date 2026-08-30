@@ -343,9 +343,9 @@ export function Navbar() {
                         onClick={() => openResult(`/profile/${player.id}`)}
                         className="flex items-center gap-3 rounded px-3 py-3 text-left hover:bg-neutral-800"
                       >
-                          {safeString(player?.faceitAvatar) ? (
+                        {safeString(player?.faceitAvatar) ? (
                           <img
-                              src={safeString(player?.faceitAvatar, "#")}
+                            src={safeString(player?.faceitAvatar, "#")}
                             alt=""
                             className="h-9 w-9 shrink-0 rounded-full object-cover"
                           />

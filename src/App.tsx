@@ -38,32 +38,35 @@ export default function App() {
           <Layout>
             <ErrorBoundary>
               <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/tournaments" element={<Tournaments />} />
-              <Route path="/tournaments/:id" element={<TournamentDetails />} />
-              <Route
-                path="/tournaments/:id/link-faceit-team"
-                element={<LinkFaceitTeam />}
-              />
-              <Route path="/rankings" element={<Rankings />} />
-              <Route path="/teams" element={<Teams />} />
-              <Route path="/teams/:id" element={<Team />} />
-              <Route path="/joukkuehaku" element={<Joukkuehaku />} />
-              <Route path="/players" element={<Rankings />} />
-              <Route path="/teamfinder" element={<TeamFinder />} />
-              <Route path="/watch" element={<Watch />} />
-              <Route
-                path="/admin/tournaments"
-                element={
-                  <AdminRoute>
-                    <AdminTournaments />
-                  </AdminRoute>
-                }
-              />
-              <Route path="/profile/:id" element={<Profile />} />
-              <Route path="/login" element={<Auth />} />
-              <Route path="/register" element={<Auth />} />
-              <Route path="*" element={<NotFound />} />
+                <Route path="/" element={<Home />} />
+                <Route path="/tournaments" element={<Tournaments />} />
+                <Route
+                  path="/tournaments/:id"
+                  element={<TournamentDetails />}
+                />
+                <Route
+                  path="/tournaments/:id/link-faceit-team"
+                  element={<LinkFaceitTeam />}
+                />
+                <Route path="/rankings" element={<Rankings />} />
+                <Route path="/teams" element={<Teams />} />
+                <Route path="/teams/:id" element={<Team />} />
+                <Route path="/joukkuehaku" element={<Joukkuehaku />} />
+                <Route path="/players" element={<Rankings />} />
+                <Route path="/teamfinder" element={<TeamFinder />} />
+                <Route path="/watch" element={<Watch />} />
+                <Route
+                  path="/admin/tournaments"
+                  element={
+                    <AdminRoute>
+                      <AdminTournaments />
+                    </AdminRoute>
+                  }
+                />
+                <Route path="/profile/:id" element={<Profile />} />
+                <Route path="/login" element={<Auth />} />
+                <Route path="/register" element={<Auth />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </ErrorBoundary>
           </Layout>

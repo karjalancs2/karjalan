@@ -20,7 +20,8 @@ function extractItems(payload: any, collectionNames: string[] = []): any[] {
   if (Array.isArray(payload?.items)) return payload.items;
   if (Array.isArray(payload?.data?.items)) return payload.data.items;
   for (const collectionName of collectionNames) {
-    if (Array.isArray(payload?.[collectionName])) return payload[collectionName];
+    if (Array.isArray(payload?.[collectionName]))
+      return payload[collectionName];
     if (Array.isArray(payload?.data?.[collectionName])) {
       return payload.data[collectionName];
     }
@@ -82,7 +83,10 @@ function groupMatchesByStage(matches: any[], stages: any[]): any[] {
   for (const stage of stages) {
     const id = String(stage?.id || stage?.stage_id || stage?.name || "stage");
     const name =
-      stage?.name || stage?.stage_name || stage?.type || `Stage ${groups.size + 1}`;
+      stage?.name ||
+      stage?.stage_name ||
+      stage?.type ||
+      `Stage ${groups.size + 1}`;
     stageNames.set(id, name);
     groups.set(id, { id, name, round: name, matches: [] });
   }
@@ -109,7 +113,9 @@ function groupMatchesByStage(matches: any[], stages: any[]): any[] {
     groups.set(id, group);
   }
 
-  return Array.from(groups.values()).filter((group) => group.matches.length > 0);
+  return Array.from(groups.values()).filter(
+    (group) => group.matches.length > 0,
+  );
 }
 
 /**
@@ -226,8 +232,10 @@ export class FaceitService {
     let stages: any[] = [];
     let rawSubscriptions: any[] = [];
     try {
+      const matchesResource =
+        resource === "championships" ? "championships" : "tournaments";
       rawMatches = await this.fetchTournamentResource(
-        resource,
+        matchesResource,
         faceitId,
         "/matches",
       );
@@ -282,10 +290,18 @@ export class FaceitService {
       }
     }
 
-    const matches = extractItems(rawMatches)
-      .map(normalizeMatch)
-      .filter((match): match is any => match !== null);
-    const brackets = groupMatchesByStage(matches, stages);
+    const response =
+      rawMatches && typeof rawMatches === "object" && !Array.isArray(rawMatches)
+        ? rawMatches
+        : { data: { items: Array.isArray(rawMatches) ? rawMatches : [] } };
+    const safeMatches = response.data.items || [];
+    const matches = Array.isArray(safeMatches)
+      ? safeMatches
+          .map(normalizeMatch)
+          .filter((match): match is any => match !== null)
+      : [];
+    const computedBrackets = groupMatchesByStage(matches, stages);
+    const brackets = Array.isArray(computedBrackets) ? computedBrackets : [];
 
     try {
       const tournament = await prisma.$transaction(async (tx) => {

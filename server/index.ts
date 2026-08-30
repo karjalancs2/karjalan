@@ -23,7 +23,7 @@ async function startServer() {
     }),
   );
 
-  const configuredOrigins = String(process.env.CORS_ORIGIN || "")
+  const configuredOrigins = (process.env.CORS_ORIGIN ?? "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);

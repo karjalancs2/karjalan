@@ -776,9 +776,14 @@ export default function TeamFinder() {
                               P{idx + 1}
                             </span>
                             <div className="w-12 h-12 bg-neutral-800 rounded-full flex items-center justify-center font-bold text-xl border border-neutral-700 group-hover:border-neutral-500 transition-colors overflow-hidden">
-                              {safeString(player?.faceitAvatar || player?.avatar) ? (
+                              {safeString(
+                                player?.faceitAvatar || player?.avatar,
+                              ) ? (
                                 <img
-                                  src={safeString(player?.faceitAvatar || player?.avatar, "#")}
+                                  src={safeString(
+                                    player?.faceitAvatar || player?.avatar,
+                                    "#",
+                                  )}
                                   alt=""
                                   className="w-full h-full object-cover"
                                 />

@@ -395,7 +395,9 @@ export default function Team() {
                 }
 
                 const profile = member.faceitProfile;
-                const avatar = safeString(member.user?.faceitAvatar || profile?.avatar);
+                const avatar = safeString(
+                  member.user?.faceitAvatar || profile?.avatar,
+                );
                 const level = member.user.faceitLevel ?? profile?.level;
                 const elo = member.user.faceitElo ?? profile?.elo;
                 return (
@@ -413,9 +415,9 @@ export default function Team() {
                           : "PLAYER"}
                       </span>
                     </div>
-                      {safeString(avatar) ? (
+                    {safeString(avatar) ? (
                       <img
-                          src={safeString(avatar, "#")}
+                        src={safeString(avatar, "#")}
                         alt={member.user.username}
                         className="w-16 h-16 rounded-full object-cover mb-4 border border-neutral-700"
                       />
