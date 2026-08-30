@@ -11,7 +11,7 @@ import {
   Play,
   Twitch,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { fi, enUS } from "date-fns/locale";
 import { safeString } from "../lib/utils";
 
@@ -64,6 +64,17 @@ export default function Home() {
     : [];
   const hasActiveMatches =
     liveMatchList.length > 0 || upcomingMatchList.length > 0;
+  const featuredDate =
+    featuredTournament?.date && typeof featuredTournament.date === "string"
+      ? (() => {
+          const parsed = parseISO(featuredTournament.date);
+          return isValid(parsed)
+            ? format(parsed, "EEEE HH:mm", {
+                locale: language === "fi" ? fi : enUS,
+              })
+            : "TBA";
+        })()
+      : "TBA";
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -233,11 +244,7 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-neutral-500" />
-                    <span>
-                      {format(parseISO(featuredTournament.date), "EEEE HH:mm", {
-                        locale: language === "fi" ? fi : enUS,
-                      })}
-                    </span>
+                    <span>{featuredDate}</span>
                   </div>
                 </div>
 

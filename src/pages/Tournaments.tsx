@@ -73,11 +73,18 @@ export default function Tournaments() {
         ) : (
           (tournamentList || []).map((tournament) => {
             if (!tournament) return null;
+            const tournamentStatus = String(tournament?.status ?? "upcoming").toLowerCase();
             const parsedDate =
               typeof tournament?.date === "string" && tournament.date.trim()
                 ? parseISO(tournament.date)
                 : null;
             const hasValidDate = parsedDate ? isValid(parsedDate) : false;
+            const formattedDate = hasValidDate && parsedDate
+              ? format(parsedDate, "dd.MM.yyyy", {
+                  locale: language === "fi" ? fi : enUS,
+                })
+              : "TBA";
+            const tournamentName = tournament?.name || "Untitled tournament";
 
             return (
               <Link
@@ -96,14 +103,14 @@ export default function Tournaments() {
                   <div className="flex flex-col">
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
                       <h2 className="text-lg sm:text-xl font-bold break-words">
-                        {tournament?.name || "Untitled tournament"}
+                        {tournamentName}
                       </h2>
-                      {tournament?.status === "live" && (
+                      {tournamentStatus === "live" && (
                         <span className="text-[10px] font-bold bg-red-500/10 text-red-500 px-2 py-0.5 rounded uppercase">
                           {language === "fi" ? "Live" : "Live"}
                         </span>
                       )}
-                      {tournament?.status === "registration" && (
+                      {tournamentStatus === "registration" && (
                         <span className="text-[10px] font-bold bg-green-500/10 text-green-400 px-2 py-0.5 rounded uppercase">
                           {language === "fi" ? "Avoinna" : "Open"}
                         </span>
@@ -112,13 +119,7 @@ export default function Tournaments() {
                     <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-sm font-medium text-neutral-400">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4 text-neutral-500" />
-                        <span>
-                          {hasValidDate && parsedDate
-                            ? format(parsedDate, "dd.MM.yyyy", {
-                                locale: language === "fi" ? fi : enUS,
-                              })
-                            : "Date unavailable"}
-                        </span>
+                        <span>{formattedDate}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Trophy className="w-4 h-4 text-yellow-500" />
@@ -143,15 +144,15 @@ export default function Tournaments() {
                       {language === "fi" ? "Osallistumismaksu" : "Entry fee"}
                     </span>
                     <span className="font-bold">
-                      {(tournament?.entryFee ?? 0) > 0
-                        ? `€${tournament?.entryFee}`
+                      {(Number(tournament?.entryFee ?? 0) > 0)
+                        ? `€${Number(tournament?.entryFee ?? 0)}`
                         : language === "fi"
                           ? "Ilmainen"
                           : "Free"}
                     </span>
                   </div>
                   <button className="w-full md:w-auto bg-white text-black font-bold px-6 py-3 rounded-sm hover:bg-neutral-200 transition-colors whitespace-nowrap">
-                    {tournament?.status === "registration"
+                    {tournamentStatus === "registration"
                       ? t("btn.register")
                       : language === "fi"
                         ? "Katso tiedot"

@@ -38,6 +38,20 @@ export default function TournamentDetails() {
   const teamList = Array.isArray(teams) ? teams : [];
   const matchList = Array.isArray(matches) ? matches : [];
   const getTeam = (teamId: string) => teamList.find((t) => t.id === teamId);
+  const normalizedStatus = String(tournament?.status ?? "upcoming").toLowerCase();
+  const formattedTournamentDate = tournament?.date
+    ? (() => {
+        const parsed = parseISO(tournament.date);
+        return Number.isNaN(parsed.getTime()) ? "TBA" : format(parsed, "dd.MM.yyyy", { locale: fi });
+      })()
+    : "TBA";
+  const formattedRegistrationDeadline = tournament?.registrationDeadline
+    ? (() => {
+        const parsed = parseISO(tournament.registrationDeadline);
+        return Number.isNaN(parsed.getTime()) ? "TBA" : format(parsed, "dd.MM. yyyy HH:mm", { locale: fi });
+      })()
+    : "TBA";
+  const tournamentFormat = tournament?.format || "FACEIT";
 
   return (
     <div className="w-full">
@@ -53,7 +67,7 @@ export default function TournamentDetails() {
                 <h1 className="text-3xl font-extrabold tracking-tight">
                   {tournament.name}
                 </h1>
-                {tournament.status === "live" && (
+                {normalizedStatus === "live" && (
                   <span className="text-[10px] font-bold bg-red-500/10 text-red-500 px-2 py-0.5 rounded uppercase flex items-center gap-1">
                     <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>{" "}
                     Live
@@ -63,11 +77,7 @@ export default function TournamentDetails() {
               <div className="flex flex-wrap gap-4 text-sm font-medium text-neutral-400">
                 <span className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />{" "}
-                  {tournament?.date
-                    ? format(parseISO(tournament.date), "dd.MM.yyyy", {
-                        locale: fi,
-                      })
-                    : "-"}
+                  {formattedTournamentDate}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Trophy className="w-4 h-4 text-yellow-500" />{" "}
@@ -84,9 +94,11 @@ export default function TournamentDetails() {
 
           <div className="w-full md:w-auto">
             <button className="w-full md:w-auto bg-white text-black font-bold px-8 py-3 rounded-sm hover:bg-neutral-200 transition-colors">
-              {tournament.status === "registration"
+              {normalizedStatus === "registration"
                 ? "ILMOITTAUDU"
-                : "Turnaus on käynnissä"}
+                : normalizedStatus === "live"
+                  ? "Turnaus on käynnissä"
+                  : "Katso tiedot"}
             </button>
           </div>
         </div>
@@ -132,7 +144,7 @@ export default function TournamentDetails() {
                     <span className="block text-neutral-500 mb-1 font-medium">
                       {language === "fi" ? "Formaatti" : "Format"}
                     </span>
-                    <span className="font-bold">{tournament.format}</span>
+                    <span className="font-bold">{tournamentFormat}</span>
                   </div>
                   <div>
                     <span className="block text-neutral-500 mb-1 font-medium">
@@ -152,15 +164,7 @@ export default function TournamentDetails() {
                         ? "Ilmoittautuminen päättyy"
                         : "Registration closes"}
                     </span>
-                    <span className="font-bold">
-                      {tournament?.registrationDeadline
-                        ? format(
-                            parseISO(tournament.registrationDeadline),
-                            "dd.MM. yyyy HH:mm",
-                            { locale: fi },
-                          )
-                        : "-"}
-                    </span>
+                    <span className="font-bold">{formattedRegistrationDeadline}</span>
                   </div>
                   <div>
                     <span className="block text-neutral-500 mb-1 font-medium">
