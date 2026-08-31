@@ -39,6 +39,18 @@ export default function TournamentDetails() {
   const teamList = Array.isArray(teams) ? teams : [];
   const matchList = Array.isArray(matches) ? matches : [];
   const getTeam = (teamId: string) => teamList.find((t) => t.id === teamId);
+  const groupedRounds = matchList.reduce((acc: any[], match: any) => {
+    const roundKey = Number.isFinite(Number(match?.round))
+      ? Number(match.round)
+      : 0;
+    const group = acc.find((entry) => entry.round === roundKey);
+    if (group) {
+      group.matches.push(match);
+      return acc;
+    }
+    acc.push({ round: roundKey, matches: [match] });
+    return acc;
+  }, []);
   const normalizedStatus = String(
     tournament?.status ?? "upcoming",
   ).toLowerCase();
@@ -257,66 +269,53 @@ export default function TournamentDetails() {
                 No bracket data available for this event yet.
               </div>
             ) : (
-              <div className="min-w-[800px] flex gap-16">
-                {/* Visual Bracket Implementation */}
-                <div className="flex flex-col gap-4 justify-center">
-                  <h3 className="text-xs font-bold text-neutral-500 uppercase mb-4 text-center">
-                    Puolivälierät
-                  </h3>
-                  {matchList.map((m) => {
-                    const t1 = getTeam(m?.team1Id);
-                    const t2 = getTeam(m?.team2Id);
-                    return (
-                      <div
-                        key={m?.id}
-                        className="bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden relative"
-                      >
-                        <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
-                        <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
-                          <span>{safeString(t1?.name, "TBD") || "TBD"}</span>
-                          <span
-                            className={
-                              (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
-                                ? "text-white"
-                                : "text-neutral-500"
-                            }
-                          >
-                            {m?.team1Score ?? 0}
-                          </span>
+              <div className="min-w-[800px] flex gap-8 items-start overflow-x-auto pb-4">
+                {groupedRounds.map((group: any) => (
+                  <div
+                    key={group.round}
+                    className="flex flex-col gap-4 justify-center min-w-[220px]"
+                  >
+                    <h3 className="text-xs font-bold text-neutral-500 uppercase mb-2 text-center">
+                      {group.round > 0 ? `Round ${group.round}` : "Unassigned"}
+                    </h3>
+                    {group.matches.map((m: any) => {
+                      const t1 = getTeam(m?.team1Id) || { name: safeString(m?.team1Name, "TBD") || "TBD" };
+                      const t2 = getTeam(m?.team2Id) || { name: safeString(m?.team2Name, "TBD") || "TBD" };
+                      return (
+                        <div
+                          key={m?.id}
+                          className="bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden relative"
+                        >
+                          <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
+                          <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
+                            <span>{safeString(t1?.name, "TBD") || "TBD"}</span>
+                            <span
+                              className={
+                                (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
+                                  ? "text-white"
+                                  : "text-neutral-500"
+                              }
+                            >
+                              {m?.team1Score ?? 0}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
+                            <span>{safeString(t2?.name, "TBD") || "TBD"}</span>
+                            <span
+                              className={
+                                (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
+                                  ? "text-white"
+                                  : "text-neutral-500"
+                              }
+                            >
+                              {m?.team2Score ?? 0}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
-                          <span>{safeString(t2?.name, "TBD") || "TBD"}</span>
-                          <span
-                            className={
-                              (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
-                                ? "text-white"
-                                : "text-neutral-500"
-                            }
-                          >
-                            {m?.team2Score ?? 0}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="flex flex-col gap-4 justify-center relative">
-                  <h3 className="text-xs font-bold text-neutral-500 uppercase mb-4 text-center">
-                    Välierät
-                  </h3>
-                  <div className="absolute -left-8 top-1/2 w-8 h-px bg-neutral-700"></div>
-                  <div className="bg-neutral-900/50 border border-neutral-800 border-dashed rounded w-64 text-sm font-medium overflow-hidden">
-                    <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800 text-neutral-600">
-                      <span>TBA</span>
-                      <span>-</span>
-                    </div>
-                    <div className="flex justify-between items-center px-4 py-2 bg-neutral-950/50 text-neutral-600">
-                      <span>TBA</span>
-                      <span>-</span>
-                    </div>
+                      );
+                    })}
                   </div>
-                </div>
+                ))}
               </div>
             )}
           </div>

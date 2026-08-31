@@ -222,7 +222,7 @@ model Match {
   team2Id       String?
   team1Score    Int       @default(0)
   team2Score    Int       @default(0)
-  round         String?
+  round         Int?
   status        String    @default("upcoming")
   faceitId      String?   @unique
   scheduledTime DateTime?

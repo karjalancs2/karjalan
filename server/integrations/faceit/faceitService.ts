@@ -36,12 +36,34 @@ function appendPagination(suffix: string) {
     : `${suffix}?offset=0&limit=100`;
 }
 
+function getFactionName(faction: any): string {
+  const name = typeof faction?.nickname === "string"
+    ? faction.nickname.trim()
+    : typeof faction?.name === "string"
+      ? faction.name.trim()
+      : "";
+  return name || "TBD";
+}
+
+function getMatchRound(match: any): number {
+  const rawRound = match?.round ?? match?.round_number ?? match?.stage?.round;
+  if (typeof rawRound === "number" && Number.isFinite(rawRound)) {
+    return Math.trunc(rawRound);
+  }
+  if (typeof rawRound === "string") {
+    const parsed = Number(rawRound.replace(/[^0-9.-]+/g, ""));
+    if (Number.isFinite(parsed)) return Math.trunc(parsed);
+  }
+  return 0;
+}
+
 function getTeamIds(match: any): string[] {
   const teams = match?.teams || match?.factions || {};
   const entries = Array.isArray(teams) ? teams : Object.values(teams);
   return entries
-    .map((team: any) =>
-      team?.team_id || team?.id || team?.team?.id || team?.faction_id,
+    .map(
+      (team: any) =>
+        team?.team_id || team?.id || team?.team?.id || team?.faction_id,
     )
     .filter((teamId): teamId is string => typeof teamId === "string");
 }
@@ -67,32 +89,35 @@ export function normalizeFaceitMatch(match: any): any | null {
   if (typeof faceitId !== "string" || !faceitId) return null;
 
   const rawTeams = match?.teams || match?.factions || {};
-  const faction1 = rawTeams?.faction1 || (Array.isArray(rawTeams) ? rawTeams[0] : null);
-  const faction2 = rawTeams?.faction2 || (Array.isArray(rawTeams) ? rawTeams[1] : null);
+  const faction1 =
+    rawTeams?.faction1 || (Array.isArray(rawTeams) ? rawTeams[0] : null);
+  const faction2 =
+    rawTeams?.faction2 || (Array.isArray(rawTeams) ? rawTeams[1] : null);
+  const team1Name = getFactionName(faction1);
+  const team2Name = getFactionName(faction2);
   const team1Id =
     faction1?.team_id ||
     faction1?.id ||
     faction1?.team?.id ||
     faction1?.faction_id ||
-    null;
+    team1Name;
   const team2Id =
     faction2?.team_id ||
     faction2?.id ||
     faction2?.team?.id ||
     faction2?.faction_id ||
-    null;
+    team2Name;
 
   const rawScore = match?.results?.score || match?.results?.[0]?.score || {};
   const team1Score = Number(rawScore?.faction1 ?? rawScore?.team1 ?? 0);
   const team2Score = Number(rawScore?.faction2 ?? rawScore?.team2 ?? 0);
+  const roundNumber = getMatchRound(match);
   const scheduledAt =
     match?.scheduled_at != null ? Number(match.scheduled_at) : null;
   const parsedScheduledTime =
     scheduledAt != null
       ? new Date(
-          scheduledAt > 1_000_000_000_000
-            ? scheduledAt
-            : scheduledAt * 1000,
+          scheduledAt > 1_000_000_000_000 ? scheduledAt : scheduledAt * 1000,
         )
       : null;
   const stage =
@@ -104,11 +129,14 @@ export function normalizeFaceitMatch(match: any): any | null {
 
   return {
     faceitId,
-    team1Id: team1Id || null,
-    team2Id: team2Id || null,
+    team1Id: team1Name,
+    team2Id: team2Name,
+    team1Name,
+    team2Name,
     team1Score: Number.isFinite(team1Score) ? Math.trunc(team1Score) : 0,
     team2Score: Number.isFinite(team2Score) ? Math.trunc(team2Score) : 0,
-    round: typeof stage === "string" ? stage : "Unassigned",
+    round: roundNumber,
+    roundLabel: typeof stage === "string" ? stage : "Unassigned",
     status: typeof match?.status === "string" ? match.status : "upcoming",
     scheduledTime:
       parsedScheduledTime && !Number.isNaN(parsedScheduledTime.getTime())
@@ -133,10 +161,12 @@ function groupMatchesByStage(matches: any[], stages: any[]): any[] {
 
   for (const match of matches) {
     const stageId = match?.stage_id || match?.stage?.id;
+    const roundNumber = Number(match?.round ?? 0);
     const name =
       (stageId && stageNames.get(String(stageId))) ||
-      match.round ||
-      "Unassigned";
+      (Number.isFinite(roundNumber) && roundNumber > 0
+        ? `Round ${roundNumber}`
+        : match.roundLabel || "Unassigned");
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "unassigned";
     const group = groups.get(id) || {
       id,
@@ -148,14 +178,22 @@ function groupMatchesByStage(matches: any[], stages: any[]): any[] {
       id: match.faceitId,
       team1Id: match.team1Id,
       team2Id: match.team2Id,
-      round: match.round,
+      team1Name: match.team1Name,
+      team2Name: match.team2Name,
+      round: roundNumber || 0,
+      team1Score: match.team1Score,
+      team2Score: match.team2Score,
     });
     groups.set(id, group);
   }
 
-  return Array.from(groups.values()).filter(
-    (group) => group.matches.length > 0,
-  );
+  return Array.from(groups.values())
+    .filter((group) => group.matches.length > 0)
+    .sort((a, b) => {
+      const aValue = Number(a.matches?.[0]?.round ?? 0);
+      const bValue = Number(b.matches?.[0]?.round ?? 0);
+      return aValue - bValue;
+    });
 }
 
 /**
@@ -391,21 +429,33 @@ export class FaceitService {
 
         await tx.match.deleteMany({ where: { tournamentId: saved.id } });
         for (const match of matches) {
-          const matchData = {
-            tournamentId: saved.id,
-            faceitId: match.faceitId,
-            team1Id: match.team1Id,
-            team2Id: match.team2Id,
-            team1Score: match.team1Score,
-            team2Score: match.team2Score,
-            round: match.round,
-            status: match.status,
-            scheduledTime: match.scheduledTime,
-          };
+          const safeRound = Number.isFinite(Number(match.round))
+            ? Number(match.round)
+            : 0;
           await tx.match.upsert({
             where: { faceitId: match.faceitId },
-            update: matchData,
-            create: matchData,
+            update: {
+              tournamentId: saved.id,
+              faceitId: match.faceitId,
+              team1Id: match.team1Id,
+              team2Id: match.team2Id,
+              team1Score: match.team1Score,
+              team2Score: match.team2Score,
+              round: safeRound,
+              status: match.status,
+              scheduledTime: match.scheduledTime,
+            },
+            create: {
+              tournamentId: saved.id,
+              faceitId: match.faceitId,
+              team1Id: match.team1Id,
+              team2Id: match.team2Id,
+              team1Score: match.team1Score,
+              team2Score: match.team2Score,
+              round: safeRound,
+              status: match.status,
+              scheduledTime: match.scheduledTime,
+            },
           });
         }
         return saved;
