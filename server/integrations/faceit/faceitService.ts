@@ -29,11 +29,20 @@ function extractItems(payload: any, collectionNames: string[] = []): any[] {
   return [];
 }
 
+function appendPagination(suffix: string) {
+  if (!suffix) return "?offset=0&limit=100";
+  return suffix.includes("?")
+    ? `${suffix}${suffix.endsWith("?") ? "" : "&"}offset=0&limit=100`
+    : `${suffix}?offset=0&limit=100`;
+}
+
 function getTeamIds(match: any): string[] {
   const teams = match?.teams || match?.factions || {};
   const entries = Array.isArray(teams) ? teams : Object.values(teams);
   return entries
-    .map((team: any) => team?.team_id || team?.id || team?.team?.id)
+    .map((team: any) =>
+      team?.team_id || team?.id || team?.team?.id || team?.faction_id,
+    )
     .filter((teamId): teamId is string => typeof teamId === "string");
 }
 
@@ -43,18 +52,49 @@ function getScore(match: any, teamId: string | undefined): number {
   const result = Array.isArray(results)
     ? results.find((entry: any) => entry?.team_id === teamId)
     : results?.[teamId];
-  const score = Number(result?.score ?? result ?? 0);
+  const score = Number(
+    result?.score?.faction1 ??
+      result?.score?.faction2 ??
+      result?.score ??
+      result ??
+      0,
+  );
   return Number.isFinite(score) ? Math.trunc(score) : 0;
 }
 
-function normalizeMatch(match: any): any | null {
+export function normalizeFaceitMatch(match: any): any | null {
   const faceitId = match?.match_id || match?.id;
   if (typeof faceitId !== "string" || !faceitId) return null;
 
-  const teamIds = getTeamIds(match);
-  const scheduledTime = match?.scheduled_at
-    ? new Date(match.scheduled_at)
-    : null;
+  const rawTeams = match?.teams || match?.factions || {};
+  const faction1 = rawTeams?.faction1 || (Array.isArray(rawTeams) ? rawTeams[0] : null);
+  const faction2 = rawTeams?.faction2 || (Array.isArray(rawTeams) ? rawTeams[1] : null);
+  const team1Id =
+    faction1?.team_id ||
+    faction1?.id ||
+    faction1?.team?.id ||
+    faction1?.faction_id ||
+    null;
+  const team2Id =
+    faction2?.team_id ||
+    faction2?.id ||
+    faction2?.team?.id ||
+    faction2?.faction_id ||
+    null;
+
+  const rawScore = match?.results?.score || match?.results?.[0]?.score || {};
+  const team1Score = Number(rawScore?.faction1 ?? rawScore?.team1 ?? 0);
+  const team2Score = Number(rawScore?.faction2 ?? rawScore?.team2 ?? 0);
+  const scheduledAt =
+    match?.scheduled_at != null ? Number(match.scheduled_at) : null;
+  const parsedScheduledTime =
+    scheduledAt != null
+      ? new Date(
+          scheduledAt > 1_000_000_000_000
+            ? scheduledAt
+            : scheduledAt * 1000,
+        )
+      : null;
   const stage =
     match?.stage_name ||
     match?.stage ||
@@ -64,15 +104,15 @@ function normalizeMatch(match: any): any | null {
 
   return {
     faceitId,
-    team1Id: teamIds[0] || null,
-    team2Id: teamIds[1] || null,
-    team1Score: getScore(match, teamIds[0]),
-    team2Score: getScore(match, teamIds[1]),
+    team1Id: team1Id || null,
+    team2Id: team2Id || null,
+    team1Score: Number.isFinite(team1Score) ? Math.trunc(team1Score) : 0,
+    team2Score: Number.isFinite(team2Score) ? Math.trunc(team2Score) : 0,
     round: typeof stage === "string" ? stage : "Unassigned",
     status: typeof match?.status === "string" ? match.status : "upcoming",
     scheduledTime:
-      scheduledTime && !Number.isNaN(scheduledTime.getTime())
-        ? scheduledTime
+      parsedScheduledTime && !Number.isNaN(parsedScheduledTime.getTime())
+        ? parsedScheduledTime
         : null,
   };
 }
@@ -237,7 +277,7 @@ export class FaceitService {
       rawMatches = await this.fetchTournamentResource(
         matchesResource,
         faceitId,
-        "/matches",
+        appendPagination("/matches"),
       );
     } catch (error) {
       const faceitError = error as FaceitError;
@@ -265,7 +305,7 @@ export class FaceitService {
         const subscriptions = await this.fetchTournamentResource(
           resource,
           faceitId,
-          "/subscriptions",
+          appendPagination("/subscriptions"),
         );
         rawSubscriptions = extractItems(subscriptions, ["subscriptions"]);
       } catch (error) {
@@ -297,7 +337,7 @@ export class FaceitService {
     const safeMatches = response?.data?.items || response?.items || [];
     const matches = Array.isArray(safeMatches)
       ? safeMatches
-          .map(normalizeMatch)
+          .map(normalizeFaceitMatch)
           .filter((match): match is any => match !== null)
       : [];
     const computedBrackets = groupMatchesByStage(matches, stages);
@@ -362,7 +402,11 @@ export class FaceitService {
             status: match.status,
             scheduledTime: match.scheduledTime,
           };
-          await tx.match.create({ data: matchData });
+          await tx.match.upsert({
+            where: { faceitId: match.faceitId },
+            update: matchData,
+            create: matchData,
+          });
         }
         return saved;
       });

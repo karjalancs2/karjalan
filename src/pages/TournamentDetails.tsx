@@ -6,6 +6,7 @@ import { Tournament, Match, Team } from "../types";
 import { Trophy, Users, Calendar, Info, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fi } from "date-fns/locale";
+import { safeString } from "../lib/utils";
 
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -38,17 +39,23 @@ export default function TournamentDetails() {
   const teamList = Array.isArray(teams) ? teams : [];
   const matchList = Array.isArray(matches) ? matches : [];
   const getTeam = (teamId: string) => teamList.find((t) => t.id === teamId);
-  const normalizedStatus = String(tournament?.status ?? "upcoming").toLowerCase();
+  const normalizedStatus = String(
+    tournament?.status ?? "upcoming",
+  ).toLowerCase();
   const formattedTournamentDate = tournament?.date
     ? (() => {
         const parsed = parseISO(tournament.date);
-        return Number.isNaN(parsed.getTime()) ? "TBA" : format(parsed, "dd.MM.yyyy", { locale: fi });
+        return Number.isNaN(parsed.getTime())
+          ? "TBA"
+          : format(parsed, "dd.MM.yyyy", { locale: fi });
       })()
     : "TBA";
   const formattedRegistrationDeadline = tournament?.registrationDeadline
     ? (() => {
         const parsed = parseISO(tournament.registrationDeadline);
-        return Number.isNaN(parsed.getTime()) ? "TBA" : format(parsed, "dd.MM. yyyy HH:mm", { locale: fi });
+        return Number.isNaN(parsed.getTime())
+          ? "TBA"
+          : format(parsed, "dd.MM. yyyy HH:mm", { locale: fi });
       })()
     : "TBA";
   const tournamentFormat = tournament?.format || "FACEIT";
@@ -76,8 +83,7 @@ export default function TournamentDetails() {
               </div>
               <div className="flex flex-wrap gap-4 text-sm font-medium text-neutral-400">
                 <span className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4" />{" "}
-                  {formattedTournamentDate}
+                  <Calendar className="w-4 h-4" /> {formattedTournamentDate}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Trophy className="w-4 h-4 text-yellow-500" />{" "}
@@ -164,7 +170,9 @@ export default function TournamentDetails() {
                         ? "Ilmoittautuminen päättyy"
                         : "Registration closes"}
                     </span>
-                    <span className="font-bold">{formattedRegistrationDeadline}</span>
+                    <span className="font-bold">
+                      {formattedRegistrationDeadline}
+                    </span>
                   </div>
                   <div>
                     <span className="block text-neutral-500 mb-1 font-medium">
@@ -265,7 +273,7 @@ export default function TournamentDetails() {
                       >
                         <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
                         <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
-                          <span>{t1?.name || "TBA"}</span>
+                          <span>{safeString(t1?.name, "TBD") || "TBD"}</span>
                           <span
                             className={
                               (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
@@ -277,7 +285,7 @@ export default function TournamentDetails() {
                           </span>
                         </div>
                         <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
-                          <span>{t2?.name || "TBA"}</span>
+                          <span>{safeString(t2?.name, "TBD") || "TBD"}</span>
                           <span
                             className={
                               (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
@@ -331,7 +339,7 @@ export default function TournamentDetails() {
                   >
                     <div className="flex items-center gap-8 w-full max-w-2xl mx-auto">
                       <div className="flex-1 text-right font-bold text-lg">
-                        {team1?.name}
+                        {safeString(team1?.name, "TBD") || "TBD"}
                       </div>
                       <div className="flex flex-col items-center justify-center min-w-[100px]">
                         <div className="text-xs font-medium text-neutral-500 mb-1">
@@ -344,7 +352,7 @@ export default function TournamentDetails() {
                         </div>
                       </div>
                       <div className="flex-1 text-left font-bold text-lg">
-                        {team2?.name}
+                        {safeString(team2?.name, "TBD") || "TBD"}
                       </div>
                     </div>
                   </div>

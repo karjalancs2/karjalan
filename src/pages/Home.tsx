@@ -145,10 +145,10 @@ export default function Home() {
                       {/* Team 1 */}
                       <div className="flex flex-col items-center gap-3 w-1/3">
                         <div className="w-16 h-16 bg-neutral-800 rounded flex items-center justify-center text-xl font-bold border border-neutral-700">
-                          {team1?.name.substring(0, 2).toUpperCase() || "T1"}
+                          {safeString(team1?.name, "TBD").substring(0, 2).toUpperCase() || "T1"}
                         </div>
                         <span className="font-semibold text-center leading-tight">
-                          {team1?.name || "Tuntematon"}
+                          {safeString(team1?.name, "TBD") || "TBD"}
                         </span>
                       </div>
 
@@ -186,10 +186,10 @@ export default function Home() {
                       {/* Team 2 */}
                       <div className="flex flex-col items-center gap-3 w-1/3">
                         <div className="w-16 h-16 bg-neutral-800 rounded flex items-center justify-center text-xl font-bold border border-neutral-700">
-                          {team2?.name.substring(0, 2).toUpperCase() || "T2"}
+                          {safeString(team2?.name, "TBD").substring(0, 2).toUpperCase() || "T2"}
                         </div>
                         <span className="font-semibold text-center leading-tight">
-                          {team2?.name || "Tuntematon"}
+                          {safeString(team2?.name, "TBD") || "TBD"}
                         </span>
                       </div>
                     </div>
