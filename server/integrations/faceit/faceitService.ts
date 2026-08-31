@@ -36,13 +36,23 @@ function appendPagination(suffix: string) {
     : `${suffix}?offset=0&limit=100`;
 }
 
-function getFactionName(faction: any): string {
-  const name = typeof faction?.nickname === "string"
-    ? faction.nickname.trim()
-    : typeof faction?.name === "string"
-      ? faction.name.trim()
-      : "";
-  return name || "TBD";
+function getFactionInfo(faction: any) {
+  const name =
+    typeof faction?.nickname === "string"
+      ? faction.nickname.trim()
+      : typeof faction?.name === "string"
+        ? faction.name.trim()
+        : "";
+  const avatar =
+    faction?.avatar ||
+    faction?.avatar_url ||
+    faction?.logo ||
+    faction?.image_url ||
+    null;
+  return {
+    name: name || "TBD",
+    avatar,
+  };
 }
 
 function getMatchRound(match: any): number {
@@ -93,8 +103,30 @@ export function normalizeFaceitMatch(match: any): any | null {
     rawTeams?.faction1 || (Array.isArray(rawTeams) ? rawTeams[0] : null);
   const faction2 =
     rawTeams?.faction2 || (Array.isArray(rawTeams) ? rawTeams[1] : null);
-  const team1Name = getFactionName(faction1);
-  const team2Name = getFactionName(faction2);
+  const team1Info = getFactionInfo(faction1);
+  const team2Info = getFactionInfo(faction2);
+  const team1Name =
+    match?.teams?.faction1?.nickname ||
+    match?.teams?.faction1?.name ||
+    team1Info.name ||
+    "TBA";
+  const team2Name =
+    match?.teams?.faction2?.nickname ||
+    match?.teams?.faction2?.name ||
+    (faction2 ? team2Info.name : "Bye") ||
+    "Bye";
+  const team1Avatar =
+    match?.teams?.faction1?.avatar ||
+    match?.teams?.faction1?.avatar_url ||
+    match?.teams?.faction1?.logo ||
+    team1Info.avatar ||
+    null;
+  const team2Avatar =
+    match?.teams?.faction2?.avatar ||
+    match?.teams?.faction2?.avatar_url ||
+    match?.teams?.faction2?.logo ||
+    team2Info.avatar ||
+    null;
   const team1Id =
     faction1?.team_id ||
     faction1?.id ||
@@ -133,6 +165,8 @@ export function normalizeFaceitMatch(match: any): any | null {
     team2Id: team2Name,
     team1Name,
     team2Name,
+    team1Avatar,
+    team2Avatar,
     team1Score: Number.isFinite(team1Score) ? Math.trunc(team1Score) : 0,
     team2Score: Number.isFinite(team2Score) ? Math.trunc(team2Score) : 0,
     round: roundNumber,
@@ -386,9 +420,20 @@ export class FaceitService {
         await tx.tournament.updateMany({ data: { isActive: false } });
 
         const existing = await tx.tournament.findFirst({ where: { faceitId } });
-        const parsedDate = details?.start_date
-          ? new Date(details.start_date)
-          : null;
+        const rawStartDate =
+          details?.championship_start != null
+            ? Number(details.championship_start)
+            : details?.start_date != null
+              ? Number(details.start_date)
+              : null;
+        const parsedDate =
+          rawStartDate != null
+            ? new Date(
+                rawStartDate > 1_000_000_000_000
+                  ? rawStartDate
+                  : rawStartDate * 1000,
+              )
+            : null;
         const prizePool = Number(details?.prize_pool);
         const teamCapacity = Number(
           details?.max_participants ??
@@ -426,6 +471,41 @@ export class FaceitService {
         const saved = existing
           ? await tx.tournament.update({ where: { id: existing.id }, data })
           : await tx.tournament.create({ data });
+
+        const subscriptionTeams = (Array.isArray(rawSubscriptions)
+          ? rawSubscriptions
+          : []
+        ).map((item: any) => {
+          const team = item?.team || item;
+          const name =
+            team?.nickname || team?.name || team?.team_name || "TBD";
+          return {
+            name,
+            avatar:
+              team?.avatar ||
+              team?.avatar_url ||
+              team?.logo ||
+              team?.image_url ||
+              null,
+          };
+        });
+
+        const fallbackCaptain = await tx.user.findFirst({
+          orderBy: { createdAt: "asc" },
+          select: { id: true },
+        });
+        for (const team of subscriptionTeams) {
+          if (!team.name || team.name === "TBD") continue;
+          await tx.team.upsert({
+            where: { name: team.name },
+            update: { logo: team.avatar ?? undefined },
+            create: {
+              name: team.name,
+              captainId: fallbackCaptain?.id || "placeholder-captain",
+              logo: team.avatar ?? null,
+            },
+          });
+        }
 
         await tx.match.deleteMany({ where: { tournamentId: saved.id } });
         for (const match of matches) {
