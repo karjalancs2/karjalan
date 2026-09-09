@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { TeamLobby, User, Tournament } from "../types";
 import { Users, Filter, Plus, Shield, Crosshair } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { isAdminUser, useAuth } from "../contexts/AuthContext";
 import { faceitTierClass, safeString } from "../lib/utils";
 
 export default function TeamFinder() {
@@ -586,7 +586,7 @@ export default function TeamFinder() {
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  {(user?.role === "ADMIN" ||
+                  {(isAdminUser(user) ||
                     user?.id === lobby.captainId ||
                     lobby.slots.some(
                       (s) =>
@@ -619,7 +619,7 @@ export default function TeamFinder() {
                       </button>
                     </>
                   )}
-                  {user?.role === "ADMIN" && user?.id !== lobby.captainId && (
+                  {isAdminUser(user) && user?.id !== lobby.captainId && (
                     <button
                       onClick={() => deleteLobby(lobby.id)}
                       className="text-sm font-medium text-red-400 hover:text-red-200 transition-colors bg-neutral-800 px-3 py-1 rounded ml-2"

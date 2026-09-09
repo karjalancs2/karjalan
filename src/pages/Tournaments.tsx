@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
-import { useAuth } from "../contexts/AuthContext";
+import { isAdminUser, useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
 import { Tournament } from "../types";
 import { Link } from "react-router-dom";
@@ -29,7 +29,7 @@ export default function Tournaments() {
           <h1 className="text-4xl font-extrabold tracking-tight uppercase">
             {t("nav.tournaments")}
           </h1>
-          {user?.role === "ADMIN" && (
+          {isAdminUser(user) && (
             <Link
               to="/admin/tournaments"
               className="inline-flex items-center justify-center bg-white text-black font-bold px-5 py-3 rounded-sm hover:bg-neutral-200 transition-colors"

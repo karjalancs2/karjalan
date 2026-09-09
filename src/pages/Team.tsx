@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Shield, Trash2, ImageOff } from "lucide-react";
 import { useTranslation } from "../contexts/TranslationContext";
-import { useAuth } from "../contexts/AuthContext";
+import { isAdminUser, useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
 import { apiFetch } from "../lib/http";
 import { faceitTierClass, safeString } from "../lib/utils";
@@ -240,7 +240,7 @@ export default function Team() {
   };
 
   const deleteTeam = async () => {
-    if (!id || user?.role !== "ADMIN" || deleting) return;
+    if (!id || !isAdminUser(user) || deleting) return;
     if (
       !window.confirm(
         language === "fi"
@@ -315,7 +315,7 @@ export default function Team() {
                 <div>
                   {language === "fi" ? "Ranking-pistettä" : "Ranking points"}
                 </div>
-                {user?.role === "ADMIN" && (
+                {isAdminUser(user) && (
                   <button
                     type="button"
                     onClick={deleteTeam}

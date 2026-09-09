@@ -72,7 +72,7 @@ async function isAdmin(userId: string) {
     where: { id: userId },
     select: { role: true },
   });
-  return user?.role === "ADMIN";
+  return String(user?.role ?? "").trim().toUpperCase() === "ADMIN";
 }
 
 function isLobbyMember(

@@ -1,7 +1,7 @@
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { TranslationProvider } from "./contexts/TranslationContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { useAuth } from "./contexts/AuthContext";
+import { isAdminUser, useAuth } from "./contexts/AuthContext";
 import { ReactNode } from "react";
 import { Layout } from "./components/Layout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -26,7 +26,7 @@ function AdminRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) return null;
-  if (user?.role !== "ADMIN") return <Navigate to="/" replace />;
+  if (!isAdminUser(user)) return <Navigate to="/" replace />;
   return children;
 }
 

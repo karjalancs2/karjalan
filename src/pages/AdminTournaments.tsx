@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
+import { isAdminUser, useAuth } from "../contexts/AuthContext";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../lib/api";
 
@@ -15,7 +15,7 @@ export default function AdminTournaments() {
   const [clearing, setClearing] = useState(false);
 
   if (loading) return null;
-  if (user?.role !== "ADMIN") return <Navigate to="/" replace />;
+  if (!isAdminUser(user)) return <Navigate to="/" replace />;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();

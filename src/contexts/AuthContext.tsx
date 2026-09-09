@@ -18,6 +18,10 @@ export interface User {
   in_game_role?: string;
 }
 
+export function isAdminUser(user: Pick<User, "role"> | null | undefined) {
+  return String(user?.role ?? "").trim().toUpperCase() === "ADMIN";
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
