@@ -279,8 +279,12 @@ export default function TournamentDetails() {
                       {group.round > 0 ? `Round ${group.round}` : "Unassigned"}
                     </h3>
                     {group.matches.map((m: any) => {
-                      const t1 = getTeam(m?.team1Id) || { name: safeString(m?.team1Name, "TBD") || "TBD" };
-                      const t2 = getTeam(m?.team2Id) || { name: safeString(m?.team2Name, "TBD") || "TBD" };
+                      const t1 = getTeam(m?.team1Id) || {
+                        name: safeString(m?.team1Name, "TBD") || "TBD",
+                      };
+                      const t2 = getTeam(m?.team2Id) || {
+                        name: safeString(m?.team2Name, "TBD") || "TBD",
+                      };
                       return (
                         <div
                           key={m?.id}

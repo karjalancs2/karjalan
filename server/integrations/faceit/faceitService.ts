@@ -411,6 +411,7 @@ export class FaceitService {
         ? rawMatches
         : { data: { items: Array.isArray(rawMatches) ? rawMatches : [] } };
     const safeMatches = response?.data?.items || response?.items || [];
+    console.log("FACEIT RAW MATCH JSON:", JSON.stringify(safeMatches[0], null, 2));
     const matches = Array.isArray(safeMatches)
       ? safeMatches
           .map(normalizeFaceitMatch)
@@ -476,13 +477,11 @@ export class FaceitService {
           ? await tx.tournament.update({ where: { id: existing.id }, data })
           : await tx.tournament.create({ data });
 
-        const subscriptionTeams = (Array.isArray(rawSubscriptions)
-          ? rawSubscriptions
-          : []
+        const subscriptionTeams = (
+          Array.isArray(rawSubscriptions) ? rawSubscriptions : []
         ).map((item: any) => {
           const team = item?.team || item;
-          const name =
-            team?.nickname || team?.name || team?.team_name || "TBD";
+          const name = team?.nickname || team?.name || team?.team_name || "TBD";
           return {
             name,
             avatar:
