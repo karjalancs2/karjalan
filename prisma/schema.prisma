@@ -48,6 +48,7 @@ model Team {
   rankingPoints Int          @default(1000)
   
   captain       User         @relation("TeamCaptain", fields: [captainId], references: [id])
+  tournaments   Tournament[]
   members       TeamMember[]
   joinRequests  JoinRequest[]
   
@@ -100,6 +101,7 @@ model Tournament {
   
   lobbies       Lobby[]
   matches       Match[]
+  teams         Team[]
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

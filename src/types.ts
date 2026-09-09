@@ -40,6 +40,7 @@ export interface Tournament {
   registrationDeadline: string;
   isActive?: boolean;
   bracketData?: unknown;
+  teams?: Team[];
 }
 
 export interface Match {

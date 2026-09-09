@@ -105,32 +105,10 @@ export function normalizeFaceitMatch(match: any): any | null {
     rawTeams?.faction2 || (Array.isArray(rawTeams) ? rawTeams[1] : null);
   const team1Info = getFactionInfo(faction1);
   const team2Info = getFactionInfo(faction2);
-  const t1 =
-    match?.teams?.faction1?.nickname ||
-    match?.teams?.faction1?.name ||
-    match?.faction1?.nickname ||
-    match?.faction1?.name ||
-    "Bye";
-  const t2 =
-    match?.teams?.faction2?.nickname ||
-    match?.teams?.faction2?.name ||
-    match?.faction2?.nickname ||
-    match?.faction2?.name ||
-    "Bye";
-  const team1Name = t1 !== "Bye" ? t1 : team1Info.name || t1;
-  const team2Name = t2 !== "Bye" ? t2 : team2Info.name || t2;
-  const team1Avatar =
-    match?.teams?.faction1?.avatar ||
-    match?.teams?.faction1?.avatar_url ||
-    match?.teams?.faction1?.logo ||
-    team1Info.avatar ||
-    null;
-  const team2Avatar =
-    match?.teams?.faction2?.avatar ||
-    match?.teams?.faction2?.avatar_url ||
-    match?.teams?.faction2?.logo ||
-    team2Info.avatar ||
-    null;
+  const team1Name = match?.teams?.faction1?.name || "TBA";
+  const team2Name = match?.teams?.faction2?.name || "TBA";
+  const team1Avatar = match?.teams?.faction1?.avatar || null;
+  const team2Avatar = match?.teams?.faction2?.avatar || null;
   const team1Id =
     faction1?.team_id ||
     faction1?.id ||
@@ -506,6 +484,19 @@ export class FaceitService {
               name: team.name,
               captainId: fallbackCaptain?.id || "placeholder-captain",
               logo: team.avatar ?? null,
+            },
+          });
+        }
+
+        if (subscriptionTeams.length > 0) {
+          await tx.tournament.update({
+            where: { id: saved.id },
+            data: {
+              teams: {
+                connect: subscriptionTeams
+                  .filter((team) => team.name && team.name !== "TBD")
+                  .map((team) => ({ name: team.name })),
+              },
             },
           });
         }

@@ -234,14 +234,14 @@ export default function TournamentDetails() {
 
         {activeTab === "teams" && (
           <div className="space-y-4">
-            {teamList.length === 0 ? (
+            {(tournament.teams || []).length === 0 ? (
               <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-8 text-neutral-400">
                 {language === "fi"
                   ? "Ei rekisteröityjä joukkueita vielä."
                   : "No registered teams yet."}
               </div>
             ) : (
-              (teamList || []).map((team) => (
+              (tournament.teams || []).map((team) => (
                 <div
                   key={team.id}
                   className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between gap-4"
