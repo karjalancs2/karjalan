@@ -103,8 +103,6 @@ export function normalizeFaceitMatch(match: any): any | null {
     rawTeams?.faction1 || (Array.isArray(rawTeams) ? rawTeams[0] : null);
   const faction2 =
     rawTeams?.faction2 || (Array.isArray(rawTeams) ? rawTeams[1] : null);
-  const team1Info = getFactionInfo(faction1);
-  const team2Info = getFactionInfo(faction2);
   const team1Name = match?.teams?.faction1?.name || "TBA";
   const team2Name = match?.teams?.faction2?.name || "TBA";
   const team1Avatar = match?.teams?.faction1?.avatar || null;
@@ -471,31 +469,47 @@ export class FaceitService {
           };
         });
 
+        const importedTeamNames = new Set<string>();
+        for (const team of subscriptionTeams) {
+          if (team.name && team.name !== "TBD") importedTeamNames.add(team.name);
+        }
+        for (const match of matches) {
+          for (const teamName of [match.team1Name, match.team2Name]) {
+            if (teamName && teamName !== "TBA" && teamName !== "TBD") {
+              importedTeamNames.add(teamName);
+            }
+          }
+        }
+
         const fallbackCaptain = await tx.user.findFirst({
           orderBy: { createdAt: "asc" },
           select: { id: true },
         });
-        for (const team of subscriptionTeams) {
-          if (!team.name || team.name === "TBD") continue;
-          await tx.team.upsert({
-            where: { name: team.name },
-            update: { logo: team.avatar ?? undefined },
+        const importedTeams = new Map<string, { id: string; name: string }>();
+        for (const teamName of importedTeamNames) {
+          const subscriptionTeam = subscriptionTeams.find(
+            (team) => team.name === teamName,
+          );
+          const team = await tx.team.upsert({
+            where: { name: teamName },
+            update: { logo: subscriptionTeam?.avatar ?? undefined },
             create: {
-              name: team.name,
+              name: teamName,
               captainId: fallbackCaptain?.id || "placeholder-captain",
-              logo: team.avatar ?? null,
+              logo: subscriptionTeam?.avatar ?? null,
             },
           });
+          importedTeams.set(teamName, { id: team.id, name: team.name });
         }
 
-        if (subscriptionTeams.length > 0) {
+        if (importedTeams.size > 0) {
           await tx.tournament.update({
             where: { id: saved.id },
             data: {
               teams: {
-                connect: subscriptionTeams
-                  .filter((team) => team.name && team.name !== "TBD")
-                  .map((team) => ({ name: team.name })),
+                connect: Array.from(importedTeams.values()).map((team) => ({
+                  id: team.id,
+                })),
               },
             },
           });
@@ -506,13 +520,15 @@ export class FaceitService {
           const safeRound = Number.isFinite(Number(match.round))
             ? Number(match.round)
             : 0;
+          const team1Id = importedTeams.get(match.team1Name)?.id || null;
+          const team2Id = importedTeams.get(match.team2Name)?.id || null;
           await tx.match.upsert({
             where: { faceitId: match.faceitId },
             update: {
               tournamentId: saved.id,
               faceitId: match.faceitId,
-              team1Id: match.team1Id,
-              team2Id: match.team2Id,
+              team1Id,
+              team2Id,
               team1Score: match.team1Score,
               team2Score: match.team2Score,
               round: safeRound,
@@ -522,8 +538,8 @@ export class FaceitService {
             create: {
               tournamentId: saved.id,
               faceitId: match.faceitId,
-              team1Id: match.team1Id,
-              team2Id: match.team2Id,
+              team1Id,
+              team2Id,
               team1Score: match.team1Score,
               team2Score: match.team2Score,
               round: safeRound,
