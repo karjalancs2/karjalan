@@ -271,7 +271,7 @@ apiRouter.get("/tournaments/:id", async (req, res) => {
   const { id } = req.params;
   const tournament = await prisma.tournament.findUnique({
     where: { id },
-    include: { matches: true, teams: true },
+    include: { teams: true, matches: { include: { team1: true, team2: true } } },
   });
   res.json(tournament || null);
 });

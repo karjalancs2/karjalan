@@ -249,7 +249,7 @@ export default function TournamentDetails() {
                   <div>
                     <div className="font-bold text-lg">{team.name}</div>
                     <div className="text-sm text-neutral-400">
-                      {team.country} • {team.playerIds.length} pelaajaa
+                      {team.country} • {(team.playerIds?.length || 0)} pelaajaa
                     </div>
                   </div>
                   <div className="text-right text-sm text-neutral-400">

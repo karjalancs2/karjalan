@@ -49,6 +49,8 @@ model Team {
   
   captain       User         @relation("TeamCaptain", fields: [captainId], references: [id])
   tournaments   Tournament[]
+  matchesAsTeam1 Match[]      @relation("MatchTeam1")
+  matchesAsTeam2 Match[]      @relation("MatchTeam2")
   members       TeamMember[]
   joinRequests  JoinRequest[]
   
@@ -230,6 +232,8 @@ model Match {
   scheduledTime DateTime?
   
   tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  team1         Team?      @relation("MatchTeam1", fields: [team1Id], references: [id])
+  team2         Team?      @relation("MatchTeam2", fields: [team2Id], references: [id])
   
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
