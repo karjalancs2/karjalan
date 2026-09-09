@@ -241,7 +241,7 @@ export default function TournamentDetails() {
                   : "No registered teams yet."}
               </div>
             ) : (
-              teamList.map((team) => (
+              (teamList || []).map((team) => (
                 <div
                   key={team.id}
                   className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between gap-4"

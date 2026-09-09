@@ -105,16 +105,20 @@ export function normalizeFaceitMatch(match: any): any | null {
     rawTeams?.faction2 || (Array.isArray(rawTeams) ? rawTeams[1] : null);
   const team1Info = getFactionInfo(faction1);
   const team2Info = getFactionInfo(faction2);
-  const team1Name =
+  const t1 =
     match?.teams?.faction1?.nickname ||
     match?.teams?.faction1?.name ||
-    team1Info.name ||
-    "TBA";
-  const team2Name =
+    match?.faction1?.nickname ||
+    match?.faction1?.name ||
+    "Bye";
+  const t2 =
     match?.teams?.faction2?.nickname ||
     match?.teams?.faction2?.name ||
-    (faction2 ? team2Info.name : "Bye") ||
+    match?.faction2?.nickname ||
+    match?.faction2?.name ||
     "Bye";
+  const team1Name = t1 !== "Bye" ? t1 : team1Info.name || t1;
+  const team2Name = t2 !== "Bye" ? t2 : team2Info.name || t2;
   const team1Avatar =
     match?.teams?.faction1?.avatar ||
     match?.teams?.faction1?.avatar_url ||
