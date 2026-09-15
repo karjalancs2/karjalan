@@ -95,7 +95,12 @@ function getScore(match: any, teamId: string | undefined): number {
 }
 
 function isByeFaction(faction: any): boolean {
-  return !faction || String(faction?.name || faction?.nickname || "").trim().toLowerCase() === "bye";
+  return (
+    !faction ||
+    String(faction?.name || faction?.nickname || "")
+      .trim()
+      .toLowerCase() === "bye"
+  );
 }
 
 export function normalizeFaceitMatch(match: any): any | null {
@@ -109,10 +114,10 @@ export function normalizeFaceitMatch(match: any): any | null {
     rawTeams?.faction2 || (Array.isArray(rawTeams) ? rawTeams[1] : null);
   const team1Name = isByeFaction(faction1)
     ? null
-    : match?.teams?.faction1?.name || "TBA";
+    : match?.teams?.faction1?.name || match?.teams?.faction1?.nickname || "TBA";
   const team2Name = isByeFaction(faction2)
     ? null
-    : match?.teams?.faction2?.name || "TBA";
+    : match?.teams?.faction2?.name || match?.teams?.faction2?.nickname || "TBA";
   const team1Avatar = match?.teams?.faction1?.avatar || null;
   const team2Avatar = isByeFaction(faction2)
     ? null
@@ -125,12 +130,11 @@ export function normalizeFaceitMatch(match: any): any | null {
     team1Name;
   const team2Id = isByeFaction(faction2)
     ? null
-    :
-    faction2?.team_id ||
-    faction2?.id ||
-    faction2?.team?.id ||
-    faction2?.faction_id ||
-    team2Name;
+    : faction2?.team_id ||
+      faction2?.id ||
+      faction2?.team?.id ||
+      faction2?.faction_id ||
+      team2Name;
 
   const rawScore = match?.results?.score || match?.results?.[0]?.score || {};
   const team1Score = Number(rawScore?.faction1 ?? rawScore?.team1 ?? 0);
@@ -408,14 +412,27 @@ export class FaceitService {
           .map(normalizeFaceitMatch)
           .filter((match): match is any => match !== null)
       : [];
-    const factionRosters = new Map<string, any[]>();
+    const matchTeamSnapshots = new Map<
+      string,
+      { avatar: string | null; roster: any[] }
+    >();
     for (const rawMatch of safeMatches) {
-      const factions = rawMatch?.factions || rawMatch?.teams || {};
-      for (const faction of Object.values(factions) as any[]) {
-        const factionName = faction?.nickname || faction?.name;
-        if (factionName && Array.isArray(faction?.roster)) {
-          factionRosters.set(factionName, faction.roster);
-        }
+      const factions = [
+        rawMatch?.teams?.faction1,
+        rawMatch?.teams?.faction2,
+      ];
+      for (const faction of factions) {
+        if (isByeFaction(faction)) continue;
+        const factionName = faction?.name || faction?.nickname;
+        if (!factionName) continue;
+        matchTeamSnapshots.set(String(factionName), {
+          avatar: faction?.avatar || faction?.avatar_url || null,
+          roster: Array.isArray(faction?.roster)
+            ? faction.roster
+            : Array.isArray(faction?.rosters)
+              ? faction.rosters
+              : [],
+        });
       }
     }
     const computedBrackets = groupMatchesByStage(matches, stages);
@@ -496,11 +513,11 @@ export class FaceitService {
               ? team.roster
               : Array.isArray(team?.rosters)
                 ? team.rosters
-              : Array.isArray(item?.roster)
-                ? item.roster
-                : Array.isArray(item?.rosters)
-                  ? item.rosters
-                : [],
+                : Array.isArray(item?.roster)
+                  ? item.roster
+                  : Array.isArray(item?.rosters)
+                    ? item.rosters
+                    : [],
           };
         });
 
@@ -537,19 +554,28 @@ export class FaceitService {
             where: { name: teamName },
             update: {
               logo:
-                subscriptionTeam?.avatar || matchTeamAvatars.get(teamName) || undefined,
+                subscriptionTeam?.avatar ||
+                matchTeamAvatars.get(teamName) ||
+                matchTeamSnapshots.get(teamName)?.avatar ||
+                undefined,
             },
             create: {
               name: teamName,
               captainId: fallbackCaptain?.id || "placeholder-captain",
-              logo: subscriptionTeam?.avatar || matchTeamAvatars.get(teamName) || null,
+              logo:
+                subscriptionTeam?.avatar ||
+                matchTeamAvatars.get(teamName) ||
+                matchTeamSnapshots.get(teamName)?.avatar ||
+                null,
             },
           });
           importedTeams.set(teamName, { id: team.id, name: team.name });
 
-          const roster = Array.isArray(subscriptionTeam?.roster)
-            ? subscriptionTeam.roster
-            : factionRosters.get(teamName) || [];
+          const subscriptionRoster = subscriptionTeam?.roster;
+          const roster =
+            Array.isArray(subscriptionRoster) && subscriptionRoster.length > 0
+              ? subscriptionRoster
+              : matchTeamSnapshots.get(teamName)?.roster || [];
           for (const player of roster) {
             const faceitId =
               player?.player_id ||
@@ -726,8 +752,10 @@ export class FaceitService {
     for (const round of rounds) {
       for (const team of Array.isArray(round?.teams) ? round.teams : []) {
         const teamId = String(team?.team_id || "team");
-        const teamEntry =
-          teams.get(teamId) || { ...team, players: new Map<string, any>() };
+        const teamEntry = teams.get(teamId) || {
+          ...team,
+          players: new Map<string, any>(),
+        };
         for (const player of Array.isArray(team?.players) ? team.players : []) {
           const playerId = String(
             player?.player_id || player?.nickname || "unknown-player",
