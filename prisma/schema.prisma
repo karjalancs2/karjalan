@@ -52,10 +52,27 @@ model Team {
   matchesAsTeam1 Match[]      @relation("MatchTeam1")
   matchesAsTeam2 Match[]      @relation("MatchTeam2")
   members       TeamMember[]
+  players       Player[]
   joinRequests  JoinRequest[]
   
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+}
+
+model Player {
+  id         String   @id @default(uuid())
+  teamId     String
+  faceitId   String
+  nickname   String
+  avatar     String?
+  skillLevel Int?
+
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([teamId, faceitId])
 }
 
 model TeamMember {

@@ -24,6 +24,15 @@ export interface Team {
   wins: number;
   losses: number;
   prizeWinnings: number;
+  players?: Player[];
+}
+
+export interface Player {
+  id: string;
+  faceitId: string;
+  nickname: string;
+  avatar?: string;
+  skillLevel?: number;
 }
 
 export interface Tournament {

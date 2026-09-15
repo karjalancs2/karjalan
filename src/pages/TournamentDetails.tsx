@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../lib/api";
-import { Tournament, Match, Team } from "../types";
-import { Trophy, Users, Calendar, Info, Clock } from "lucide-react";
+import { Tournament, Match, Team, Player } from "../types";
+import { Trophy, Users, Calendar, Info, Clock, Shield, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fi } from "date-fns/locale";
 import { safeString } from "../lib/utils";
@@ -17,6 +17,11 @@ export default function TournamentDetails() {
   const [activeTab, setActiveTab] = useState<
     "overview" | "bracket" | "matches" | "teams"
   >("overview");
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [matchStats, setMatchStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -29,6 +34,28 @@ export default function TournamentDetails() {
     loadData();
   }, [id]);
 
+  useEffect(() => {
+    if (!selectedMatch?.faceitId) return;
+    let cancelled = false;
+    setStatsLoading(true);
+    setStatsError(null);
+    setMatchStats(null);
+    api
+      .getMatchStats(selectedMatch.faceitId)
+      .then((data) => {
+        if (!cancelled) setMatchStats(data);
+      })
+      .catch((error: any) => {
+        if (!cancelled) setStatsError(error?.message || "Failed to load scoreboard");
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMatch]);
+
   if (!tournament)
     return (
       <div className="p-12 text-center text-neutral-500 font-bold">
@@ -39,6 +66,23 @@ export default function TournamentDetails() {
   const teamList = Array.isArray(teams) ? teams : [];
   const matchList = Array.isArray(matches) ? matches : [];
   const getTeam = (teamId: string) => teamList.find((t) => t.id === teamId);
+  const logoFor = (team?: Partial<Team> | null) => team?.logo || undefined;
+  const TeamLogo = ({ team, size = "w-6 h-6" }: { team?: Partial<Team> | null; size?: string }) =>
+    logoFor(team) ? (
+      <img src={logoFor(team)} alt="" className={`${size} object-cover rounded`} />
+    ) : (
+      <Shield className={`${size} text-yellow-500`} />
+    );
+  const scoreRows = (matchStats?.rounds || []).flatMap((round: any) =>
+    (round?.teams || []).flatMap((team: any) =>
+      (team?.players || []).map((player: any) => ({
+        team: team?.team_id || "Team",
+        nickname: player?.nickname || player?.player_id || "Player",
+        avatar: player?.avatar,
+        stats: player?.player_stats || {},
+      })),
+    ),
+  );
   const groupedRounds = matchList.reduce((acc: any[], match: any) => {
     const roundKey = Number.isFinite(Number(match?.round))
       ? Number(match.round)
@@ -242,21 +286,28 @@ export default function TournamentDetails() {
               </div>
             ) : (
               (tournament.teams || []).map((team) => (
-                <div
+                <button
                   key={team.id}
-                  className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between gap-4"
+                  type="button"
+                  onClick={() => setSelectedTeam(team)}
+                  className="w-full text-left bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between gap-4 hover:border-yellow-500/60 transition-colors"
                 >
-                  <div>
-                    <div className="font-bold text-lg">{team.name}</div>
-                    <div className="text-sm text-neutral-400">
-                      {team.country} • {(team.playerIds?.length || 0)} pelaajaa
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded border border-neutral-700 bg-neutral-950 flex items-center justify-center overflow-hidden">
+                      <TeamLogo team={team} size="w-full h-full" />
                     </div>
+                    <div>
+                      <div className="font-bold text-lg">{team.name}</div>
+                    <div className="text-sm text-neutral-400">
+                      {team.country || "FACEIT"} • {(team.players?.length || 0)} pelaajaa
+                    </div>
+                  </div>
                   </div>
                   <div className="text-right text-sm text-neutral-400">
                     <div>Pisteet: {team.rankingPoints}</div>
                     <div>Voitot: {team.wins}</div>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
@@ -286,13 +337,15 @@ export default function TournamentDetails() {
                         name: safeString(m?.team2Name, "TBD") || "TBD",
                       };
                       return (
-                        <div
+                        <button
                           key={m?.id}
+                          type="button"
+                          onClick={() => setSelectedMatch(m)}
                           className="bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden relative"
                         >
                           <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
                           <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
-                            <span>{safeString(t1?.name, "TBD") || "TBD"}</span>
+                            <span className="flex items-center gap-2"><TeamLogo team={t1} size="w-5 h-5" />{safeString(t1?.name, "TBD") || "TBD"}</span>
                             <span
                               className={
                                 (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
@@ -304,7 +357,7 @@ export default function TournamentDetails() {
                             </span>
                           </div>
                           <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
-                            <span>{safeString(t2?.name, "TBD") || "TBD"}</span>
+                            <span className="flex items-center gap-2"><TeamLogo team={t2} size="w-5 h-5" />{safeString(t2?.name, "TBD") || "TBD"}</span>
                             <span
                               className={
                                 (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
@@ -315,7 +368,7 @@ export default function TournamentDetails() {
                               {m?.team2Score ?? 0}
                             </span>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -336,13 +389,15 @@ export default function TournamentDetails() {
                 const team1 = getTeam(match?.team1Id);
                 const team2 = getTeam(match?.team2Id);
                 return (
-                  <div
+                  <button
                     key={match?.id}
+                    type="button"
+                    onClick={() => setSelectedMatch(match)}
                     className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 flex items-center justify-between hover:border-neutral-700 transition-colors"
                   >
                     <div className="flex items-center gap-8 w-full max-w-2xl mx-auto">
                       <div className="flex-1 text-right font-bold text-lg">
-                        {safeString(team1?.name, "TBD") || "TBD"}
+                        <span className="inline-flex items-center gap-2"><TeamLogo team={team1} />{safeString(team1?.name, "TBD") || "TBD"}</span>
                       </div>
                       <div className="flex flex-col items-center justify-center min-w-[100px]">
                         <div className="text-xs font-medium text-neutral-500 mb-1">
@@ -355,16 +410,46 @@ export default function TournamentDetails() {
                         </div>
                       </div>
                       <div className="flex-1 text-left font-bold text-lg">
-                        {safeString(team2?.name, "TBD") || "TBD"}
+                        <span className="inline-flex items-center gap-2"><TeamLogo team={team2} />{safeString(team2?.name, "TBD") || "TBD"}</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })
             )}
           </div>
         )}
       </div>
+      {selectedTeam && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-2xl bg-neutral-950 border border-yellow-500/40 rounded-lg p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3"><Shield className="text-yellow-500" /><h2 className="text-2xl font-bold">{selectedTeam.name}</h2></div>
+              <button type="button" onClick={() => setSelectedTeam(null)} aria-label="Close roster" className="text-neutral-400 hover:text-white"><X /></button>
+            </div>
+            <div className="grid gap-3">
+              {(selectedTeam.players || []).map((player: Player) => (
+                <div key={player.id} className="flex items-center gap-3 border border-neutral-800 bg-neutral-900 px-4 py-3 rounded">
+                  {player.avatar ? <img src={player.avatar} alt="" className="w-10 h-10 rounded-full object-cover" /> : <Shield className="w-10 h-10 p-2 text-yellow-500 bg-neutral-950 rounded-full" />}
+                  <span className="font-bold flex-1">{player.nickname}</span>
+                  <span className="text-sm text-yellow-500">FACEIT Level {player.skillLevel ?? "-"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {selectedMatch && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-auto bg-neutral-950 border border-yellow-500/40 rounded-lg p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6"><div><p className="text-xs uppercase tracking-widest text-yellow-500">Match scoreboard</p><h2 className="text-2xl font-bold">{getTeam(selectedMatch.team1Id)?.name || selectedMatch.team1Id} <span className="text-neutral-600">vs</span> {getTeam(selectedMatch.team2Id)?.name || selectedMatch.team2Id}</h2></div><button type="button" onClick={() => setSelectedMatch(null)} aria-label="Close scoreboard" className="text-neutral-400 hover:text-white"><X /></button></div>
+            {statsLoading && <p className="text-neutral-400">Loading scoreboard...</p>}
+            {statsError && <p className="text-red-300">{statsError}</p>}
+            {!statsLoading && !statsError && scoreRows.length === 0 && <p className="text-neutral-400">No detailed scoreboard data is available yet.</p>}
+            {scoreRows.length > 0 && <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-neutral-500 border-b border-neutral-800"><tr><th className="py-3">Player</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>K/D</th></tr></thead><tbody>{scoreRows.map((row: any, index: number) => <tr key={`${row.nickname}-${index}`} className="border-b border-neutral-900"><td className="py-3 flex items-center gap-2 font-bold">{row.avatar && <img src={row.avatar} alt="" className="w-7 h-7 rounded-full object-cover" />}{row.nickname}</td><td>{row.stats.Kills ?? row.stats.kills ?? "-"}</td><td>{row.stats.Deaths ?? row.stats.deaths ?? "-"}</td><td>{row.stats.Assists ?? row.stats.assists ?? "-"}</td><td className="text-yellow-500">{row.stats["K/D Ratio"] ?? row.stats.kd_ratio ?? "-"}</td></tr>)}</tbody></table></div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

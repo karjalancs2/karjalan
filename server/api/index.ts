@@ -271,7 +271,10 @@ apiRouter.get("/tournaments/:id", async (req, res) => {
   const { id } = req.params;
   const tournament = await prisma.tournament.findUnique({
     where: { id },
-    include: { teams: true, matches: { include: { team1: true, team2: true } } },
+    include: {
+      teams: { include: { players: { orderBy: { nickname: "asc" } } } },
+      matches: { include: { team1: true, team2: true } },
+    },
   });
   res.json(tournament || null);
 });
@@ -281,6 +284,18 @@ apiRouter.get("/tournaments/:id/matches", async (req, res) => {
   const { id } = req.params;
   const matches = await prisma.match.findMany({ where: { tournamentId: id } });
   res.json(matches);
+});
+
+apiRouter.get("/matches/:faceitId/stats", async (req, res) => {
+  try {
+    const stats = await faceitService.getMatchStats(req.params.faceitId);
+    return res.json(stats);
+  } catch (error: any) {
+    console.error("Failed to fetch FACEIT match stats:", error);
+    return res.status(error?.status === 404 ? 404 : 502).json({
+      error: error?.message || "Failed to fetch match stats",
+    });
+  }
 });
 
 apiRouter.post(

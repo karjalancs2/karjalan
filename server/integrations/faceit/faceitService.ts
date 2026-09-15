@@ -393,6 +393,16 @@ export class FaceitService {
           .map(normalizeFaceitMatch)
           .filter((match): match is any => match !== null)
       : [];
+    const factionRosters = new Map<string, any[]>();
+    for (const rawMatch of safeMatches) {
+      const factions = rawMatch?.factions || rawMatch?.teams || {};
+      for (const faction of Object.values(factions) as any[]) {
+        const factionName = faction?.nickname || faction?.name;
+        if (factionName && Array.isArray(faction?.roster)) {
+          factionRosters.set(factionName, faction.roster);
+        }
+      }
+    }
     const computedBrackets = groupMatchesByStage(matches, stages);
     const brackets = Array.isArray(computedBrackets) ? computedBrackets : [];
 
@@ -460,12 +470,18 @@ export class FaceitService {
           const name = team?.nickname || team?.name || team?.team_name || "TBD";
           return {
             name,
+            faceitId: team?.team_id || team?.id || null,
             avatar:
               team?.avatar ||
               team?.avatar_url ||
               team?.logo ||
               team?.image_url ||
               null,
+            roster: Array.isArray(team?.roster)
+              ? team.roster
+              : Array.isArray(item?.roster)
+                ? item.roster
+                : [],
           };
         });
 
@@ -500,6 +516,39 @@ export class FaceitService {
             },
           });
           importedTeams.set(teamName, { id: team.id, name: team.name });
+
+          const roster = Array.isArray(subscriptionTeam?.roster)
+            ? subscriptionTeam.roster
+            : factionRosters.get(teamName) || [];
+          for (const player of roster.slice(0, 5)) {
+            const faceitId =
+              player?.player_id || player?.id || player?.guid || player?.user_id;
+            const nickname = player?.nickname || player?.name;
+            if (!faceitId || !nickname) continue;
+            await tx.player.upsert({
+              where: {
+                teamId_faceitId: { teamId: team.id, faceitId: String(faceitId) },
+              },
+              update: {
+                nickname: String(nickname),
+                avatar: player?.avatar || player?.avatar_url || null,
+                skillLevel:
+                  player?.game_skill_level == null
+                    ? null
+                    : Number(player.game_skill_level),
+              },
+              create: {
+                teamId: team.id,
+                faceitId: String(faceitId),
+                nickname: String(nickname),
+                avatar: player?.avatar || player?.avatar_url || null,
+                skillLevel:
+                  player?.game_skill_level == null
+                    ? null
+                    : Number(player.game_skill_level),
+              },
+            });
+          }
         }
 
         if (importedTeams.size > 0) {
@@ -610,6 +659,23 @@ export class FaceitService {
       console.error("[FACEIT PROD] Error connecting:", error);
       throw new Error(error.message);
     }
+  }
+
+  async getMatchStats(matchId: string) {
+    if (this.isMockMode) return { rounds: [] };
+
+    const response = await fetch(
+      `https://open.faceit.com/data/v4/matches/${encodeURIComponent(matchId)}/stats`,
+      { headers: { Authorization: `Bearer ${this.getApiKey()}` } },
+    );
+    const rawResponse = await response.text();
+    if (!response.ok) {
+      const error = new Error(`FACEIT API returned ${response.status}`) as FaceitError;
+      error.status = response.status;
+      error.rawResponse = rawResponse;
+      throw error;
+    }
+    return JSON.parse(rawResponse);
   }
 
   /**

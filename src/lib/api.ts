@@ -81,6 +81,12 @@ export const api = {
       return [];
     }
   },
+  getMatchStats: async (faceitId: string) => {
+    const res = await apiFetch(`/api/matches/${encodeURIComponent(faceitId)}/stats`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw apiError(data.error || "Failed to load match stats", res.status);
+    return data;
+  },
   getTeams: async () => {
     try {
       const res = await apiFetch("/api/teams");
