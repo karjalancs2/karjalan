@@ -79,12 +79,16 @@ export default function TournamentDetails() {
       <span
         className={`${size} inline-flex items-center justify-center rounded-full border border-yellow-500/60 bg-neutral-950 text-xs font-bold text-yellow-500`}
       >
-        {String(team?.name || "?").charAt(0).toUpperCase()}
+        {String(team?.name || "?")
+          .charAt(0)
+          .toUpperCase()}
       </span>
     );
     if (!logoFor(team)) return fallback;
     return (
-      <span className={`${size} relative inline-flex items-center justify-center`}>
+      <span
+        className={`${size} relative inline-flex items-center justify-center`}
+      >
         <img
           src={logoFor(team)}
           alt=""
@@ -94,7 +98,9 @@ export default function TournamentDetails() {
             event.currentTarget.nextElementSibling?.removeAttribute("hidden");
           }}
         />
-        <span hidden className="absolute inset-0">{fallback}</span>
+        <span hidden className="absolute inset-0">
+          {fallback}
+        </span>
       </span>
     );
   };
@@ -118,11 +124,17 @@ export default function TournamentDetails() {
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
           <h3 className="font-bold text-white">
-            {getTeam(index === 0 ? selectedMatch?.team1Id : selectedMatch?.team2Id)
-              ?.name || team?.team_id || `Team ${index + 1}`}
+            {getTeam(
+              index === 0 ? selectedMatch?.team1Id : selectedMatch?.team2Id,
+            )?.name ||
+              team?.team_id ||
+              `Team ${index + 1}`}
           </h3>
           <span className="text-xs uppercase tracking-widest text-yellow-500">
-            Score {index === 0 ? selectedMatch?.team1Score : selectedMatch?.team2Score}
+            Score{" "}
+            {index === 0
+              ? selectedMatch?.team1Score
+              : selectedMatch?.team2Score}
           </span>
         </div>
         <div className="overflow-x-auto">
@@ -154,7 +166,8 @@ export default function TournamentDetails() {
                   <td>{row.stats.Kills ?? row.stats.kills ?? "-"}</td>
                   <td>{row.stats.Deaths ?? row.stats.deaths ?? "-"}</td>
                   <td className="text-yellow-500">
-                    {row.stats.Assists ?? row.stats.assists ?? "-"} (K/D {row.stats["K/D Ratio"] ?? row.stats.kd_ratio ?? "-"})
+                    {row.stats.Assists ?? row.stats.assists ?? "-"} (K/D{" "}
+                    {row.stats["K/D Ratio"] ?? row.stats.kd_ratio ?? "-"})
                   </td>
                 </tr>
               ))}
@@ -164,18 +177,21 @@ export default function TournamentDetails() {
       </section>
     );
   };
-  const groupedRounds = matchList.reduce((acc: any[], match: any) => {
-    const roundKey = Number.isFinite(Number(match?.round))
-      ? Number(match.round)
-      : 0;
-    const group = acc.find((entry) => entry.round === roundKey);
-    if (group) {
-      group.matches.push(match);
+  const groupedRounds = matchList
+    .reduce((acc: any[], match: any) => {
+      const roundKey = Number.isFinite(Number(match?.round))
+        ? Number(match.round)
+        : 0;
+      const group = acc.find((entry) => entry.round === roundKey);
+      if (group) {
+        group.matches.push(match);
+        return acc;
+      }
+      acc.push({ round: roundKey, matches: [match] });
       return acc;
-    }
-    acc.push({ round: roundKey, matches: [match] });
-    return acc;
-  }, []).sort((a, b) => a.round - b.round);
+    }, [])
+    .sort((a, b) => a.round - b.round);
+  const baseSlotHeight = 100;
   const normalizedStatus = String(
     tournament?.status ?? "upcoming",
   ).toLowerCase();
@@ -403,10 +419,10 @@ export default function TournamentDetails() {
               </div>
             ) : (
               <div className="min-w-[800px] min-h-[640px] flex flex-row items-stretch gap-8 overflow-x-auto pb-4">
-                {groupedRounds.map((group: any) => (
+                {groupedRounds.map((group: any, roundIndex: number) => (
                   <div
                     key={group.round}
-                    className="flex h-full min-h-[420px] flex-col gap-4 justify-around min-w-[220px]"
+                    className="flex h-full min-h-[640px] flex-col min-w-[220px]"
                   >
                     <h3 className="text-xs font-bold text-neutral-500 uppercase mb-2 text-center">
                       {group.round > 0 ? `Round ${group.round}` : "Unassigned"}
@@ -415,7 +431,8 @@ export default function TournamentDetails() {
                       const t1 = getTeam(m?.team1Id) || {
                         name: safeString(m?.team1Name, "TBD") || "TBD",
                       };
-                      const isBye = !m?.team2Id ||
+                      const isBye =
+                        !m?.team2Id ||
                         String(m?.team2Name || "").toLowerCase() === "bye";
                       const t2 = isBye
                         ? null
@@ -423,45 +440,57 @@ export default function TournamentDetails() {
                             name: safeString(m?.team2Name, "TBD") || "TBD",
                           };
                       return (
-                        <div key={m?.id} className="flex flex-col justify-center flex-1">
+                        <div
+                          key={m?.id}
+                          className="flex flex-col justify-center"
+                          style={{
+                            minHeight: `${baseSlotHeight * Math.pow(2, roundIndex)}px`,
+                          }}
+                        >
                           <button
                             type="button"
                             onClick={() => setSelectedMatch(m)}
                             className="bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden relative"
                           >
-                          <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
-                          <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
-                            <span className="flex items-center gap-2">
-                              <TeamLogo team={t1} size="w-5 h-5" />
-                              {safeString(t1?.name, "TBD") || "TBD"}
-                            </span>
-                            <span
-                              className={
-                                (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
-                                  ? "text-white"
-                                  : "text-neutral-500"
-                              }
-                            >
-                              {isBye ? "W" : m?.team1Score ?? 0}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
-                            <span className="flex items-center gap-2">
-                              {!isBye && <TeamLogo team={t2} size="w-5 h-5" />}
-                              <span className={isBye ? "text-neutral-500" : ""}>
-                                {isBye ? "BYE" : safeString(t2?.name, "TBD") || "TBD"}
+                            <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
+                            <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
+                              <span className="flex items-center gap-2">
+                                <TeamLogo team={t1} size="w-5 h-5" />
+                                {safeString(t1?.name, "TBD") || "TBD"}
                               </span>
-                            </span>
-                            <span
-                              className={
-                                (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
-                                  ? "text-white"
-                                  : "text-neutral-500"
-                              }
-                            >
-                              {isBye ? "-" : m?.team2Score ?? 0}
-                            </span>
-                          </div>
+                              <span
+                                className={
+                                  (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
+                                    ? "text-white"
+                                    : "text-neutral-500"
+                                }
+                              >
+                                {isBye ? "W" : (m?.team1Score ?? 0)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
+                              <span className="flex items-center gap-2">
+                                {!isBye && (
+                                  <TeamLogo team={t2} size="w-5 h-5" />
+                                )}
+                                <span
+                                  className={isBye ? "text-neutral-500" : ""}
+                                >
+                                  {isBye
+                                    ? "BYE"
+                                    : safeString(t2?.name, "TBD") || "TBD"}
+                                </span>
+                              </span>
+                              <span
+                                className={
+                                  (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
+                                    ? "text-white"
+                                    : "text-neutral-500"
+                                }
+                              >
+                                {isBye ? "-" : (m?.team2Score ?? 0)}
+                              </span>
+                            </div>
                           </button>
                         </div>
                       );
@@ -561,7 +590,8 @@ export default function TournamentDetails() {
                   <span
                     className={`text-sm px-2 py-1 rounded ${faceitTierClass(player.skillLevel, player.faceitElo)}`}
                   >
-                    Lvl {player.skillLevel ?? "-"} | Elo {player.faceitElo ?? "-"}
+                    Lvl {player.skillLevel ?? "-"} | Elo{" "}
+                    {player.faceitElo ?? "-"}
                   </span>
                 </div>
               ))}
