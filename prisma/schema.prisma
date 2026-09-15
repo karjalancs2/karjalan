@@ -66,6 +66,7 @@ model Player {
   nickname   String
   avatar     String?
   skillLevel Int?
+  faceitElo  Int?
 
   team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 

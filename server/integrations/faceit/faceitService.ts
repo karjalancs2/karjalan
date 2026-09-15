@@ -94,6 +94,10 @@ function getScore(match: any, teamId: string | undefined): number {
   return Number.isFinite(score) ? Math.trunc(score) : 0;
 }
 
+function isByeFaction(faction: any): boolean {
+  return !faction || String(faction?.name || faction?.nickname || "").trim().toLowerCase() === "bye";
+}
+
 export function normalizeFaceitMatch(match: any): any | null {
   const faceitId = match?.match_id || match?.id;
   if (typeof faceitId !== "string" || !faceitId) return null;
@@ -103,17 +107,25 @@ export function normalizeFaceitMatch(match: any): any | null {
     rawTeams?.faction1 || (Array.isArray(rawTeams) ? rawTeams[0] : null);
   const faction2 =
     rawTeams?.faction2 || (Array.isArray(rawTeams) ? rawTeams[1] : null);
-  const team1Name = match?.teams?.faction1?.name || "TBA";
-  const team2Name = match?.teams?.faction2?.name || "TBA";
+  const team1Name = isByeFaction(faction1)
+    ? null
+    : match?.teams?.faction1?.name || "TBA";
+  const team2Name = isByeFaction(faction2)
+    ? null
+    : match?.teams?.faction2?.name || "TBA";
   const team1Avatar = match?.teams?.faction1?.avatar || null;
-  const team2Avatar = match?.teams?.faction2?.avatar || null;
+  const team2Avatar = isByeFaction(faction2)
+    ? null
+    : match?.teams?.faction2?.avatar || null;
   const team1Id =
     faction1?.team_id ||
     faction1?.id ||
     faction1?.team?.id ||
     faction1?.faction_id ||
     team1Name;
-  const team2Id =
+  const team2Id = isByeFaction(faction2)
+    ? null
+    :
     faction2?.team_id ||
     faction2?.id ||
     faction2?.team?.id ||
@@ -323,21 +335,6 @@ export class FaceitService {
     let rawMatches: any = [];
     let stages: any[] = [];
     let rawSubscriptions: any[] = [];
-    try {
-      const matchesResource =
-        resource === "championships" ? "championships" : "tournaments";
-      rawMatches = await this.fetchTournamentResource(
-        matchesResource,
-        faceitId,
-        appendPagination("/matches"),
-      );
-    } catch (error) {
-      const faceitError = error as FaceitError;
-      console.warn(
-        `FACEIT matches unavailable for ${resource}/${faceitId}: ${faceitError.message || String(error)}. Continuing without matches.`,
-      );
-    }
-
     if (resource === "championships") {
       try {
         const rawStages = await this.fetchTournamentResource(
@@ -380,6 +377,21 @@ export class FaceitService {
           `FACEIT brackets unavailable for tournaments/${faceitId}: ${faceitError.message || String(error)}. Grouping matches by round instead.`,
         );
       }
+    }
+
+    try {
+      const matchesResource =
+        resource === "championships" ? "championships" : "tournaments";
+      rawMatches = await this.fetchTournamentResource(
+        matchesResource,
+        faceitId,
+        appendPagination("/matches"),
+      );
+    } catch (error) {
+      const faceitError = error as FaceitError;
+      console.warn(
+        `FACEIT matches unavailable for ${resource}/${faceitId}: ${faceitError.message || String(error)}. Continuing without matches.`,
+      );
     }
 
     const response =
@@ -482,8 +494,12 @@ export class FaceitService {
               null,
             roster: Array.isArray(team?.roster)
               ? team.roster
+              : Array.isArray(team?.rosters)
+                ? team.rosters
               : Array.isArray(item?.roster)
                 ? item.roster
+                : Array.isArray(item?.rosters)
+                  ? item.rosters
                 : [],
           };
         });
@@ -556,6 +572,8 @@ export class FaceitService {
                   player?.game_skill_level == null
                     ? null
                     : Number(player.game_skill_level),
+                faceitElo:
+                  player?.faceit_elo == null ? null : Number(player.faceit_elo),
               },
               create: {
                 teamId: team.id,
@@ -566,6 +584,8 @@ export class FaceitService {
                   player?.game_skill_level == null
                     ? null
                     : Number(player.game_skill_level),
+                faceitElo:
+                  player?.faceit_elo == null ? null : Number(player.faceit_elo),
               },
             });
           }
@@ -590,7 +610,9 @@ export class FaceitService {
             ? Number(match.round)
             : 0;
           const team1Id = importedTeams.get(match.team1Name)?.id || null;
-          const team2Id = importedTeams.get(match.team2Name)?.id || null;
+          const team2Id = match.team2Name
+            ? importedTeams.get(match.team2Name)?.id || null
+            : null;
           await tx.match.upsert({
             where: { faceitId: match.faceitId },
             update: {

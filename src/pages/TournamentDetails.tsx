@@ -6,7 +6,7 @@ import { Tournament, Match, Team, Player } from "../types";
 import { Trophy, Users, Calendar, Info, Clock, Shield, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fi } from "date-fns/locale";
-import { safeString } from "../lib/utils";
+import { faceitTierClass, safeString } from "../lib/utils";
 
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -392,7 +392,7 @@ export default function TournamentDetails() {
                 {groupedRounds.map((group: any) => (
                   <div
                     key={group.round}
-                    className="flex flex-col gap-4 justify-center min-w-[220px]"
+                    className="flex flex-col gap-4 justify-around min-h-[420px] min-w-[220px]"
                   >
                     <h3 className="text-xs font-bold text-neutral-500 uppercase mb-2 text-center">
                       {group.round > 0 ? `Round ${group.round}` : "Unassigned"}
@@ -401,9 +401,13 @@ export default function TournamentDetails() {
                       const t1 = getTeam(m?.team1Id) || {
                         name: safeString(m?.team1Name, "TBD") || "TBD",
                       };
-                      const t2 = getTeam(m?.team2Id) || {
-                        name: safeString(m?.team2Name, "TBD") || "TBD",
-                      };
+                      const isBye = !m?.team2Id ||
+                        String(m?.team2Name || "").toLowerCase() === "bye";
+                      const t2 = isBye
+                        ? null
+                        : getTeam(m?.team2Id) || {
+                            name: safeString(m?.team2Name, "TBD") || "TBD",
+                          };
                       return (
                         <button
                           key={m?.id}
@@ -429,8 +433,10 @@ export default function TournamentDetails() {
                           </div>
                           <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
                             <span className="flex items-center gap-2">
-                              <TeamLogo team={t2} size="w-5 h-5" />
-                              {safeString(t2?.name, "TBD") || "TBD"}
+                              {!isBye && <TeamLogo team={t2} size="w-5 h-5" />}
+                              <span className={isBye ? "text-neutral-500" : ""}>
+                                {isBye ? "BYE" : safeString(t2?.name, "TBD") || "TBD"}
+                              </span>
                             </span>
                             <span
                               className={
@@ -439,7 +445,7 @@ export default function TournamentDetails() {
                                   : "text-neutral-500"
                               }
                             >
-                              {m?.team2Score ?? 0}
+                              {isBye ? "-" : m?.team2Score ?? 0}
                             </span>
                           </div>
                         </button>
@@ -537,8 +543,10 @@ export default function TournamentDetails() {
                     <Shield className="w-10 h-10 p-2 text-yellow-500 bg-neutral-950 rounded-full" />
                   )}
                   <span className="font-bold flex-1">{player.nickname}</span>
-                  <span className="text-sm text-yellow-500">
-                    FACEIT Level {player.skillLevel ?? "-"}
+                  <span
+                    className={`text-sm px-2 py-1 rounded ${faceitTierClass(player.skillLevel, player.faceitElo)}`}
+                  >
+                    Lvl {player.skillLevel ?? "-"} | Elo {player.faceitElo ?? "-"}
                   </span>
                 </div>
               ))}

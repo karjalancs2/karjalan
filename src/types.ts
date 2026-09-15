@@ -33,6 +33,7 @@ export interface Player {
   nickname: string;
   avatar?: string;
   skillLevel?: number;
+  faceitElo?: number;
 }
 
 export interface Tournament {
