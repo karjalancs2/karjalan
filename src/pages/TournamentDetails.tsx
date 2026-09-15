@@ -80,6 +80,10 @@ export default function TournamentDetails() {
         src={logoFor(team)}
         alt=""
         className={`${size} object-cover rounded`}
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = "/NEW%20KARJALAN%20LOGO.png";
+        }}
       />
     ) : (
       <Shield className={`${size} text-yellow-500`} />
@@ -388,7 +392,7 @@ export default function TournamentDetails() {
                 No bracket data available for this event yet.
               </div>
             ) : (
-              <div className="min-w-[800px] flex flex-row gap-8 items-start overflow-x-auto pb-4">
+              <div className="min-w-[800px] min-h-[640px] flex flex-row items-stretch gap-8 overflow-x-auto pb-4">
                 {groupedRounds.map((group: any) => (
                   <div
                     key={group.round}

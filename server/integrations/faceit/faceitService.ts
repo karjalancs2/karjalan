@@ -354,7 +354,7 @@ export class FaceitService {
         const subscriptions = await this.fetchTournamentResource(
           resource,
           faceitId,
-          appendPagination("/subscriptions"),
+          "/subscriptions?offset=0&limit=100",
         );
         rawSubscriptions = extractItems(subscriptions, ["subscriptions"]);
       } catch (error) {
@@ -550,7 +550,7 @@ export class FaceitService {
           const roster = Array.isArray(subscriptionTeam?.roster)
             ? subscriptionTeam.roster
             : factionRosters.get(teamName) || [];
-          for (const player of roster.slice(0, 5)) {
+          for (const player of roster) {
             const faceitId =
               player?.player_id ||
               player?.id ||
