@@ -387,7 +387,10 @@ export class FaceitService {
         ? rawMatches
         : { data: { items: Array.isArray(rawMatches) ? rawMatches : [] } };
     const safeMatches = response?.data?.items || response?.items || [];
-    console.log("FACEIT RAW MATCH JSON:", JSON.stringify(safeMatches[0], null, 2));
+    console.log(
+      "FACEIT RAW MATCH JSON:",
+      JSON.stringify(safeMatches[0], null, 2),
+    );
     const matches = Array.isArray(safeMatches)
       ? safeMatches
           .map(normalizeFaceitMatch)
@@ -486,10 +489,18 @@ export class FaceitService {
         });
 
         const importedTeamNames = new Set<string>();
+        const matchTeamAvatars = new Map<string, string>();
         for (const team of subscriptionTeams) {
-          if (team.name && team.name !== "TBD") importedTeamNames.add(team.name);
+          if (team.name && team.name !== "TBD")
+            importedTeamNames.add(team.name);
         }
         for (const match of matches) {
+          if (match.team1Name && match.team1Avatar) {
+            matchTeamAvatars.set(match.team1Name, match.team1Avatar);
+          }
+          if (match.team2Name && match.team2Avatar) {
+            matchTeamAvatars.set(match.team2Name, match.team2Avatar);
+          }
           for (const teamName of [match.team1Name, match.team2Name]) {
             if (teamName && teamName !== "TBA" && teamName !== "TBD") {
               importedTeamNames.add(teamName);
@@ -508,11 +519,14 @@ export class FaceitService {
           );
           const team = await tx.team.upsert({
             where: { name: teamName },
-            update: { logo: subscriptionTeam?.avatar ?? undefined },
+            update: {
+              logo:
+                subscriptionTeam?.avatar || matchTeamAvatars.get(teamName) || undefined,
+            },
             create: {
               name: teamName,
               captainId: fallbackCaptain?.id || "placeholder-captain",
-              logo: subscriptionTeam?.avatar ?? null,
+              logo: subscriptionTeam?.avatar || matchTeamAvatars.get(teamName) || null,
             },
           });
           importedTeams.set(teamName, { id: team.id, name: team.name });
@@ -522,12 +536,18 @@ export class FaceitService {
             : factionRosters.get(teamName) || [];
           for (const player of roster.slice(0, 5)) {
             const faceitId =
-              player?.player_id || player?.id || player?.guid || player?.user_id;
+              player?.player_id ||
+              player?.id ||
+              player?.guid ||
+              player?.user_id;
             const nickname = player?.nickname || player?.name;
             if (!faceitId || !nickname) continue;
             await tx.player.upsert({
               where: {
-                teamId_faceitId: { teamId: team.id, faceitId: String(faceitId) },
+                teamId_faceitId: {
+                  teamId: team.id,
+                  faceitId: String(faceitId),
+                },
               },
               update: {
                 nickname: String(nickname),
@@ -670,7 +690,9 @@ export class FaceitService {
     );
     const rawResponse = await response.text();
     if (!response.ok) {
-      const error = new Error(`FACEIT API returned ${response.status}`) as FaceitError;
+      const error = new Error(
+        `FACEIT API returned ${response.status}`,
+      ) as FaceitError;
       error.status = response.status;
       error.rawResponse = rawResponse;
       throw error;

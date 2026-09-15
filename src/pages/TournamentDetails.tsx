@@ -46,7 +46,8 @@ export default function TournamentDetails() {
         if (!cancelled) setMatchStats(data);
       })
       .catch((error: any) => {
-        if (!cancelled) setStatsError(error?.message || "Failed to load scoreboard");
+        if (!cancelled)
+          setStatsError(error?.message || "Failed to load scoreboard");
       })
       .finally(() => {
         if (!cancelled) setStatsLoading(false);
@@ -67,9 +68,19 @@ export default function TournamentDetails() {
   const matchList = Array.isArray(matches) ? matches : [];
   const getTeam = (teamId: string) => teamList.find((t) => t.id === teamId);
   const logoFor = (team?: Partial<Team> | null) => team?.logo || undefined;
-  const TeamLogo = ({ team, size = "w-6 h-6" }: { team?: Partial<Team> | null; size?: string }) =>
+  const TeamLogo = ({
+    team,
+    size = "w-6 h-6",
+  }: {
+    team?: Partial<Team> | null;
+    size?: string;
+  }) =>
     logoFor(team) ? (
-      <img src={logoFor(team)} alt="" className={`${size} object-cover rounded`} />
+      <img
+        src={logoFor(team)}
+        alt=""
+        className={`${size} object-cover rounded`}
+      />
     ) : (
       <Shield className={`${size} text-yellow-500`} />
     );
@@ -83,6 +94,62 @@ export default function TournamentDetails() {
       })),
     ),
   );
+  const scoreboardTeams = matchStats?.rounds?.[0]?.teams || [];
+  const renderScoreTable = (team: any, index: number) => {
+    const teamRows = scoreRows.filter((row: any) => row.team === team?.team_id);
+    return (
+      <section
+        key={team?.team_id || index}
+        className="border border-neutral-800 bg-neutral-900 rounded-lg overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+          <h3 className="font-bold text-white">
+            {getTeam(index === 0 ? selectedMatch?.team1Id : selectedMatch?.team2Id)
+              ?.name || team?.team_id || `Team ${index + 1}`}
+          </h3>
+          <span className="text-xs uppercase tracking-widest text-yellow-500">
+            Score {index === 0 ? selectedMatch?.team1Score : selectedMatch?.team2Score}
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs uppercase text-neutral-500 border-b border-neutral-800">
+              <tr>
+                <th className="py-3 px-4">Player</th>
+                <th>Kills</th>
+                <th>Deaths</th>
+                <th>Assists (K/D/A)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamRows.map((row: any, rowIndex: number) => (
+                <tr
+                  key={`${row.nickname}-${rowIndex}`}
+                  className="border-b border-neutral-800 last:border-0"
+                >
+                  <td className="py-3 px-4 flex items-center gap-2 font-bold">
+                    {row.avatar && (
+                      <img
+                        src={row.avatar}
+                        alt=""
+                        className="w-7 h-7 rounded-full object-cover"
+                      />
+                    )}
+                    {row.nickname}
+                  </td>
+                  <td>{row.stats.Kills ?? row.stats.kills ?? "-"}</td>
+                  <td>{row.stats.Deaths ?? row.stats.deaths ?? "-"}</td>
+                  <td className="text-yellow-500">
+                    {row.stats.Assists ?? row.stats.assists ?? "-"} (K/D {row.stats["K/D Ratio"] ?? row.stats.kd_ratio ?? "-"})
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    );
+  };
   const groupedRounds = matchList.reduce((acc: any[], match: any) => {
     const roundKey = Number.isFinite(Number(match?.round))
       ? Number(match.round)
@@ -94,7 +161,7 @@ export default function TournamentDetails() {
     }
     acc.push({ round: roundKey, matches: [match] });
     return acc;
-  }, []);
+  }, []).sort((a, b) => a.round - b.round);
   const normalizedStatus = String(
     tournament?.status ?? "upcoming",
   ).toLowerCase();
@@ -298,10 +365,11 @@ export default function TournamentDetails() {
                     </div>
                     <div>
                       <div className="font-bold text-lg">{team.name}</div>
-                    <div className="text-sm text-neutral-400">
-                      {team.country || "FACEIT"} • {(team.players?.length || 0)} pelaajaa
+                      <div className="text-sm text-neutral-400">
+                        {team.country || "FACEIT"} • {team.players?.length || 0}{" "}
+                        pelaajaa
+                      </div>
                     </div>
-                  </div>
                   </div>
                   <div className="text-right text-sm text-neutral-400">
                     <div>Pisteet: {team.rankingPoints}</div>
@@ -320,7 +388,7 @@ export default function TournamentDetails() {
                 No bracket data available for this event yet.
               </div>
             ) : (
-              <div className="min-w-[800px] flex gap-8 items-start overflow-x-auto pb-4">
+              <div className="min-w-[800px] flex flex-row gap-8 items-start overflow-x-auto pb-4">
                 {groupedRounds.map((group: any) => (
                   <div
                     key={group.round}
@@ -345,7 +413,10 @@ export default function TournamentDetails() {
                         >
                           <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
                           <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
-                            <span className="flex items-center gap-2"><TeamLogo team={t1} size="w-5 h-5" />{safeString(t1?.name, "TBD") || "TBD"}</span>
+                            <span className="flex items-center gap-2">
+                              <TeamLogo team={t1} size="w-5 h-5" />
+                              {safeString(t1?.name, "TBD") || "TBD"}
+                            </span>
                             <span
                               className={
                                 (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
@@ -357,7 +428,10 @@ export default function TournamentDetails() {
                             </span>
                           </div>
                           <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
-                            <span className="flex items-center gap-2"><TeamLogo team={t2} size="w-5 h-5" />{safeString(t2?.name, "TBD") || "TBD"}</span>
+                            <span className="flex items-center gap-2">
+                              <TeamLogo team={t2} size="w-5 h-5" />
+                              {safeString(t2?.name, "TBD") || "TBD"}
+                            </span>
                             <span
                               className={
                                 (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
@@ -397,7 +471,10 @@ export default function TournamentDetails() {
                   >
                     <div className="flex items-center gap-8 w-full max-w-2xl mx-auto">
                       <div className="flex-1 text-right font-bold text-lg">
-                        <span className="inline-flex items-center gap-2"><TeamLogo team={team1} />{safeString(team1?.name, "TBD") || "TBD"}</span>
+                        <span className="inline-flex items-center gap-2">
+                          <TeamLogo team={team1} />
+                          {safeString(team1?.name, "TBD") || "TBD"}
+                        </span>
                       </div>
                       <div className="flex flex-col items-center justify-center min-w-[100px]">
                         <div className="text-xs font-medium text-neutral-500 mb-1">
@@ -410,7 +487,10 @@ export default function TournamentDetails() {
                         </div>
                       </div>
                       <div className="flex-1 text-left font-bold text-lg">
-                        <span className="inline-flex items-center gap-2"><TeamLogo team={team2} />{safeString(team2?.name, "TBD") || "TBD"}</span>
+                        <span className="inline-flex items-center gap-2">
+                          <TeamLogo team={team2} />
+                          {safeString(team2?.name, "TBD") || "TBD"}
+                        </span>
                       </div>
                     </div>
                   </button>
@@ -421,18 +501,45 @@ export default function TournamentDetails() {
         )}
       </div>
       {selectedTeam && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="w-full max-w-2xl bg-neutral-950 border border-yellow-500/40 rounded-lg p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3"><Shield className="text-yellow-500" /><h2 className="text-2xl font-bold">{selectedTeam.name}</h2></div>
-              <button type="button" onClick={() => setSelectedTeam(null)} aria-label="Close roster" className="text-neutral-400 hover:text-white"><X /></button>
+              <div className="flex items-center gap-3">
+                <Shield className="text-yellow-500" />
+                <h2 className="text-2xl font-bold">{selectedTeam.name}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTeam(null)}
+                aria-label="Close roster"
+                className="text-neutral-400 hover:text-white"
+              >
+                <X />
+              </button>
             </div>
             <div className="grid gap-3">
               {(selectedTeam.players || []).map((player: Player) => (
-                <div key={player.id} className="flex items-center gap-3 border border-neutral-800 bg-neutral-900 px-4 py-3 rounded">
-                  {player.avatar ? <img src={player.avatar} alt="" className="w-10 h-10 rounded-full object-cover" /> : <Shield className="w-10 h-10 p-2 text-yellow-500 bg-neutral-950 rounded-full" />}
+                <div
+                  key={player.id}
+                  className="flex items-center gap-3 border border-neutral-800 bg-neutral-900 px-4 py-3 rounded"
+                >
+                  {player.avatar ? (
+                    <img
+                      src={player.avatar}
+                      alt=""
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <Shield className="w-10 h-10 p-2 text-yellow-500 bg-neutral-950 rounded-full" />
+                  )}
                   <span className="font-bold flex-1">{player.nickname}</span>
-                  <span className="text-sm text-yellow-500">FACEIT Level {player.skillLevel ?? "-"}</span>
+                  <span className="text-sm text-yellow-500">
+                    FACEIT Level {player.skillLevel ?? "-"}
+                  </span>
                 </div>
               ))}
             </div>
@@ -440,13 +547,48 @@ export default function TournamentDetails() {
         </div>
       )}
       {selectedMatch && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="w-full max-w-4xl max-h-[90vh] overflow-auto bg-neutral-950 border border-yellow-500/40 rounded-lg p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-6"><div><p className="text-xs uppercase tracking-widest text-yellow-500">Match scoreboard</p><h2 className="text-2xl font-bold">{getTeam(selectedMatch.team1Id)?.name || selectedMatch.team1Id} <span className="text-neutral-600">vs</span> {getTeam(selectedMatch.team2Id)?.name || selectedMatch.team2Id}</h2></div><button type="button" onClick={() => setSelectedMatch(null)} aria-label="Close scoreboard" className="text-neutral-400 hover:text-white"><X /></button></div>
-            {statsLoading && <p className="text-neutral-400">Loading scoreboard...</p>}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-xs uppercase tracking-widest text-yellow-500">
+                  Match scoreboard
+                </p>
+                <h2 className="text-2xl font-bold">
+                  {getTeam(selectedMatch.team1Id)?.name ||
+                    selectedMatch.team1Id}{" "}
+                  <span className="text-neutral-600">vs</span>{" "}
+                  {getTeam(selectedMatch.team2Id)?.name ||
+                    selectedMatch.team2Id}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMatch(null)}
+                aria-label="Close scoreboard"
+                className="text-neutral-400 hover:text-white"
+              >
+                <X />
+              </button>
+            </div>
+            {statsLoading && (
+              <p className="text-neutral-400">Loading scoreboard...</p>
+            )}
             {statsError && <p className="text-red-300">{statsError}</p>}
-            {!statsLoading && !statsError && scoreRows.length === 0 && <p className="text-neutral-400">No detailed scoreboard data is available yet.</p>}
-            {scoreRows.length > 0 && <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs uppercase text-neutral-500 border-b border-neutral-800"><tr><th className="py-3">Player</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>K/D</th></tr></thead><tbody>{scoreRows.map((row: any, index: number) => <tr key={`${row.nickname}-${index}`} className="border-b border-neutral-900"><td className="py-3 flex items-center gap-2 font-bold">{row.avatar && <img src={row.avatar} alt="" className="w-7 h-7 rounded-full object-cover" />}{row.nickname}</td><td>{row.stats.Kills ?? row.stats.kills ?? "-"}</td><td>{row.stats.Deaths ?? row.stats.deaths ?? "-"}</td><td>{row.stats.Assists ?? row.stats.assists ?? "-"}</td><td className="text-yellow-500">{row.stats["K/D Ratio"] ?? row.stats.kd_ratio ?? "-"}</td></tr>)}</tbody></table></div>}
+            {!statsLoading && !statsError && scoreRows.length === 0 && (
+              <p className="text-neutral-400">
+                No detailed scoreboard data is available yet.
+              </p>
+            )}
+            {scoreRows.length > 0 && scoreboardTeams.length >= 2 && (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                {scoreboardTeams.slice(0, 2).map(renderScoreTable)}
+              </div>
+            )}
           </div>
         </div>
       )}
