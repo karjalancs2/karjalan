@@ -427,7 +427,7 @@ export default function TournamentDetails() {
                     <h3 className="text-xs font-bold text-neutral-500 uppercase mb-2 text-center">
                       {group.round > 0 ? `Round ${group.round}` : "Unassigned"}
                     </h3>
-                    {group.matches.map((m: any) => {
+                    {group.matches.map((m: any, matchIndex: number) => {
                       const t1 = getTeam(m?.team1Id) || {
                         name: safeString(m?.team1Name, "TBD") || "TBD",
                       };
@@ -442,7 +442,15 @@ export default function TournamentDetails() {
                       return (
                         <div
                           key={m?.id}
-                          className="flex flex-col justify-center"
+                          className={`bracket-slot flex flex-col justify-center ${
+                            matchIndex % 2 === 0
+                              ? "bracket-slot--top"
+                              : "bracket-slot--bottom"
+                          } ${roundIndex === 0 ? "bracket-slot--first" : ""} ${
+                            roundIndex === groupedRounds.length - 1
+                              ? "bracket-slot--last"
+                              : ""
+                          }`}
                           style={{
                             minHeight: `${baseSlotHeight * Math.pow(2, roundIndex)}px`,
                           }}
@@ -450,9 +458,8 @@ export default function TournamentDetails() {
                           <button
                             type="button"
                             onClick={() => setSelectedMatch(m)}
-                            className="bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden relative"
+                            className="bracket-card bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden"
                           >
-                            <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
                             <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
                               <span className="flex items-center gap-2">
                                 <TeamLogo team={t1} size="w-5 h-5" />
