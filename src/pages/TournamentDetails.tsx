@@ -74,20 +74,30 @@ export default function TournamentDetails() {
   }: {
     team?: Partial<Team> | null;
     size?: string;
-  }) =>
-    logoFor(team) ? (
-      <img
-        src={logoFor(team)}
-        alt=""
-        className={`${size} object-cover rounded`}
-        onError={(event) => {
-          event.currentTarget.onerror = null;
-          event.currentTarget.src = "/NEW%20KARJALAN%20LOGO.png";
-        }}
-      />
-    ) : (
-      <Shield className={`${size} text-yellow-500`} />
+  }) => {
+    const fallback = (
+      <span
+        className={`${size} inline-flex items-center justify-center rounded-full border border-yellow-500/60 bg-neutral-950 text-xs font-bold text-yellow-500`}
+      >
+        {String(team?.name || "?").charAt(0).toUpperCase()}
+      </span>
     );
+    if (!logoFor(team)) return fallback;
+    return (
+      <span className={`${size} relative inline-flex items-center justify-center`}>
+        <img
+          src={logoFor(team)}
+          alt=""
+          className={`${size} object-cover rounded`}
+          onError={(event) => {
+            event.currentTarget.hidden = true;
+            event.currentTarget.nextElementSibling?.removeAttribute("hidden");
+          }}
+        />
+        <span hidden className="absolute inset-0">{fallback}</span>
+      </span>
+    );
+  };
   const scoreRows = (matchStats?.rounds || []).flatMap((round: any) =>
     (round?.teams || []).flatMap((team: any) =>
       (team?.players || []).map((player: any) => ({
@@ -396,7 +406,7 @@ export default function TournamentDetails() {
                 {groupedRounds.map((group: any) => (
                   <div
                     key={group.round}
-                    className="flex flex-col gap-4 justify-around min-h-[420px] min-w-[220px]"
+                    className="flex h-full min-h-[420px] flex-col gap-4 justify-around min-w-[220px]"
                   >
                     <h3 className="text-xs font-bold text-neutral-500 uppercase mb-2 text-center">
                       {group.round > 0 ? `Round ${group.round}` : "Unassigned"}
@@ -413,12 +423,12 @@ export default function TournamentDetails() {
                             name: safeString(m?.team2Name, "TBD") || "TBD",
                           };
                       return (
-                        <button
-                          key={m?.id}
-                          type="button"
-                          onClick={() => setSelectedMatch(m)}
-                          className="bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden relative"
-                        >
+                        <div key={m?.id} className="flex flex-col justify-center flex-1">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedMatch(m)}
+                            className="bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden relative"
+                          >
                           <div className="absolute -right-8 top-1/2 w-8 h-px bg-neutral-700"></div>
                           <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
                             <span className="flex items-center gap-2">
@@ -432,7 +442,7 @@ export default function TournamentDetails() {
                                   : "text-neutral-500"
                               }
                             >
-                              {m?.team1Score ?? 0}
+                              {isBye ? "W" : m?.team1Score ?? 0}
                             </span>
                           </div>
                           <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
@@ -452,7 +462,8 @@ export default function TournamentDetails() {
                               {isBye ? "-" : m?.team2Score ?? 0}
                             </span>
                           </div>
-                        </button>
+                          </button>
+                        </div>
                       );
                     })}
                   </div>

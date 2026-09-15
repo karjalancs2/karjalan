@@ -719,7 +719,55 @@ export class FaceitService {
       error.rawResponse = rawResponse;
       throw error;
     }
-    return JSON.parse(rawResponse);
+    const payload = JSON.parse(rawResponse);
+    const rounds = Array.isArray(payload?.rounds) ? payload.rounds : [];
+    const teams = new Map<string, any>();
+
+    for (const round of rounds) {
+      for (const team of Array.isArray(round?.teams) ? round.teams : []) {
+        const teamId = String(team?.team_id || "team");
+        const teamEntry =
+          teams.get(teamId) || { ...team, players: new Map<string, any>() };
+        for (const player of Array.isArray(team?.players) ? team.players : []) {
+          const playerId = String(
+            player?.player_id || player?.nickname || "unknown-player",
+          );
+          const existing = teamEntry.players.get(playerId);
+          const stats = player?.player_stats || {};
+          const add = (key: string) =>
+            Number(stats[key] ?? stats[key.toLowerCase()] ?? 0) || 0;
+          if (existing) {
+            existing.player_stats.Kills += add("Kills");
+            existing.player_stats.Deaths += add("Deaths");
+            existing.player_stats.Assists += add("Assists");
+          } else {
+            teamEntry.players.set(playerId, {
+              ...player,
+              player_stats: {
+                ...stats,
+                Kills: add("Kills"),
+                Deaths: add("Deaths"),
+                Assists: add("Assists"),
+              },
+            });
+          }
+        }
+        teams.set(teamId, teamEntry);
+      }
+    }
+
+    return {
+      ...payload,
+      rounds: [
+        {
+          ...(rounds[0] || {}),
+          teams: Array.from(teams.values()).map((team) => ({
+            ...team,
+            players: Array.from(team.players.values()),
+          })),
+        },
+      ],
+    };
   }
 
   /**
