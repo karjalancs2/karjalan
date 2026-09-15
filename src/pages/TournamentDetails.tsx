@@ -595,10 +595,9 @@ export default function TournamentDetails() {
                   )}
                   <span className="font-bold flex-1">{player.nickname}</span>
                   <span
-                    className={`text-sm px-2 py-1 rounded ${faceitTierClass(player.skillLevel, player.faceitElo)}`}
+                    className={`text-sm px-2 py-1 rounded ${faceitTierClass(player.skillLevel)}`}
                   >
-                    Lvl {player.skillLevel ?? "-"} | Elo{" "}
-                    {player.faceitElo ?? "-"}
+                    Level {player.skillLevel ?? "?"}
                   </span>
                 </div>
               ))}

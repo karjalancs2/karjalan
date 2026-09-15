@@ -417,10 +417,7 @@ export class FaceitService {
       { avatar: string | null; roster: any[] }
     >();
     for (const rawMatch of safeMatches) {
-      const factions = [
-        rawMatch?.teams?.faction1,
-        rawMatch?.teams?.faction2,
-      ];
+      const factions = [rawMatch?.teams?.faction1, rawMatch?.teams?.faction2];
       for (const faction of factions) {
         if (isByeFaction(faction)) continue;
         const factionName = faction?.name || faction?.nickname;
@@ -550,7 +547,7 @@ export class FaceitService {
           const subscriptionTeam = subscriptionTeams.find(
             (team) => team.name === teamName,
           );
-          const team = await tx.team.upsert({
+          const upsertedTeam = await tx.team.upsert({
             where: { name: teamName },
             update: {
               logo:
@@ -569,7 +566,10 @@ export class FaceitService {
                 null,
             },
           });
-          importedTeams.set(teamName, { id: team.id, name: team.name });
+          importedTeams.set(teamName, {
+            id: upsertedTeam.id,
+            name: upsertedTeam.name,
+          });
 
           const subscriptionRoster = subscriptionTeam?.roster;
           const roster =
@@ -587,7 +587,7 @@ export class FaceitService {
             await tx.player.upsert({
               where: {
                 teamId_faceitId: {
-                  teamId: team.id,
+                  teamId: upsertedTeam.id,
                   faceitId: String(faceitId),
                 },
               },
@@ -602,7 +602,7 @@ export class FaceitService {
                   player?.faceit_elo == null ? null : Number(player.faceit_elo),
               },
               create: {
-                teamId: team.id,
+                teamId: upsertedTeam.id,
                 faceitId: String(faceitId),
                 nickname: String(nickname),
                 avatar: player?.avatar || player?.avatar_url || null,
