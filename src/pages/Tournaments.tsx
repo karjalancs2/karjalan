@@ -73,17 +73,20 @@ export default function Tournaments() {
         ) : (
           (tournamentList || []).map((tournament) => {
             if (!tournament) return null;
-            const tournamentStatus = String(tournament?.status ?? "upcoming").toLowerCase();
+            const tournamentStatus = String(
+              tournament?.status ?? "upcoming",
+            ).toLowerCase();
             const parsedDate =
               typeof tournament?.date === "string" && tournament.date.trim()
                 ? parseISO(tournament.date)
                 : null;
             const hasValidDate = parsedDate ? isValid(parsedDate) : false;
-            const formattedDate = hasValidDate && parsedDate
-              ? format(parsedDate, "dd.MM.yyyy", {
-                  locale: language === "fi" ? fi : enUS,
-                })
-              : "TBA";
+            const formattedDate =
+              hasValidDate && parsedDate
+                ? format(parsedDate, "dd.MM.yyyy", {
+                    locale: language === "fi" ? fi : enUS,
+                  })
+                : "TBA";
             const tournamentName = tournament?.name || "Untitled tournament";
 
             return (
@@ -144,7 +147,7 @@ export default function Tournaments() {
                       {language === "fi" ? "Osallistumismaksu" : "Entry fee"}
                     </span>
                     <span className="font-bold">
-                      {(Number(tournament?.entryFee ?? 0) > 0)
+                      {Number(tournament?.entryFee ?? 0) > 0
                         ? `€${Number(tournament?.entryFee ?? 0)}`
                         : language === "fi"
                           ? "Ilmainen"

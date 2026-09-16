@@ -456,357 +456,175 @@ export class FaceitService {
     const brackets = Array.isArray(computedBrackets) ? computedBrackets : [];
 
     try {
-      const tournament = await prisma.$transaction(async (tx) => {
-        await tx.tournament.updateMany({ data: { isActive: false } });
+      const tournament = await prisma.$transaction(
+        async (tx) => {
+          await tx.tournament.updateMany({ data: { isActive: false } });
 
-        const existing = await tx.tournament.findFirst({ where: { faceitId } });
-        const rawStartDate =
-          details?.championship_start != null
-            ? Number(details.championship_start)
-            : details?.start_date != null
-              ? Number(details.start_date)
+          const existing = await tx.tournament.findFirst({
+            where: { faceitId },
+          });
+          const rawStartDate =
+            details?.championship_start != null
+              ? Number(details.championship_start)
+              : details?.start_date != null
+                ? Number(details.start_date)
+                : null;
+          const parsedDate =
+            rawStartDate != null
+              ? new Date(
+                  rawStartDate > 1_000_000_000_000
+                    ? rawStartDate
+                    : rawStartDate * 1000,
+                )
               : null;
-        const parsedDate =
-          rawStartDate != null
-            ? new Date(
-                rawStartDate > 1_000_000_000_000
-                  ? rawStartDate
-                  : rawStartDate * 1000,
-              )
-            : null;
-        const prizePool = Number(details?.prize_pool);
-        const teamCapacity = Number(
-          details?.max_participants ??
-            details?.max_teams ??
-            (rawSubscriptions.length > 0 ? rawSubscriptions.length : 64),
-        );
-        const data = {
-          name:
-            typeof details?.name === "string" && details.name.trim()
-              ? details.name.trim()
-              : `FACEIT Tournament ${faceitId}`,
-          status:
-            typeof details?.status === "string" && details.status.trim()
-              ? details.status
-              : "upcoming",
-          date:
-            parsedDate && !Number.isNaN(parsedDate.getTime())
-              ? parsedDate
-              : null,
-          prizePool: Number.isFinite(prizePool)
-            ? Math.max(0, Math.trunc(prizePool))
-            : 0,
-          teamCapacity: Number.isFinite(teamCapacity)
-            ? Math.max(1, Math.trunc(teamCapacity))
-            : 64,
-          format:
-            typeof details?.format === "string" && details.format.trim()
-              ? details.format
-              : "FACEIT",
-          faceitId,
-          isActive: true,
-          bracketData: brackets,
-        };
-
-        const saved = existing
-          ? await tx.tournament.update({ where: { id: existing.id }, data })
-          : await tx.tournament.create({ data });
-
-        const subscriptionTeams = (
-          Array.isArray(rawSubscriptions) ? rawSubscriptions : []
-        ).map((item: any) => {
-          const team = item?.team || item;
-          const name = team?.nickname || team?.name || team?.team_name || "TBD";
-          return {
-            name,
-            faceitId: team?.team_id || team?.id || null,
-            avatar:
-              String(
-                team?.avatar ||
-                  team?.avatar_url ||
-                  team?.logo ||
-                  team?.image_url ||
-                  "",
-              ).trim() || null,
-            roster: Array.isArray(team?.roster)
-              ? team.roster
-              : Array.isArray(team?.rosters)
-                ? team.rosters
-                : Array.isArray(item?.roster)
-                  ? item.roster
-                  : Array.isArray(item?.rosters)
-                    ? item.rosters
-                    : [],
+          const prizePool = Number(details?.prize_pool);
+          const teamCapacity = Number(
+            details?.max_participants ??
+              details?.max_teams ??
+              (rawSubscriptions.length > 0 ? rawSubscriptions.length : 64),
+          );
+          const data = {
+            name:
+              typeof details?.name === "string" && details.name.trim()
+                ? details.name.trim()
+                : `FACEIT Tournament ${faceitId}`,
+            status:
+              typeof details?.status === "string" && details.status.trim()
+                ? details.status
+                : "upcoming",
+            date:
+              parsedDate && !Number.isNaN(parsedDate.getTime())
+                ? parsedDate
+                : null,
+            prizePool: Number.isFinite(prizePool)
+              ? Math.max(0, Math.trunc(prizePool))
+              : 0,
+            teamCapacity: Number.isFinite(teamCapacity)
+              ? Math.max(1, Math.trunc(teamCapacity))
+              : 64,
+            format:
+              typeof details?.format === "string" && details.format.trim()
+                ? details.format
+                : "FACEIT",
+            faceitId,
+            isActive: true,
+            bracketData: brackets,
           };
-        });
 
-        const importedTeamNames = new Set<string>();
-        const matchTeamAvatars = new Map<string, string>();
-        for (const team of subscriptionTeams) {
-          if (team.name && team.name !== "TBD")
-            importedTeamNames.add(team.name);
-        }
-        for (const match of matches) {
-          if (match.team1Name && match.team1Avatar) {
-            matchTeamAvatars.set(match.team1Name, match.team1Avatar);
+          const saved = existing
+            ? await tx.tournament.update({ where: { id: existing.id }, data })
+            : await tx.tournament.create({ data });
+
+          const subscriptionTeams = (
+            Array.isArray(rawSubscriptions) ? rawSubscriptions : []
+          ).map((item: any) => {
+            const team = item?.team || item;
+            const name =
+              team?.nickname || team?.name || team?.team_name || "TBD";
+            return {
+              name,
+              faceitId: team?.team_id || team?.id || null,
+              avatar:
+                String(
+                  team?.avatar ||
+                    team?.avatar_url ||
+                    team?.logo ||
+                    team?.image_url ||
+                    "",
+                ).trim() || null,
+              roster: Array.isArray(team?.roster)
+                ? team.roster
+                : Array.isArray(team?.rosters)
+                  ? team.rosters
+                  : Array.isArray(item?.roster)
+                    ? item.roster
+                    : Array.isArray(item?.rosters)
+                      ? item.rosters
+                      : [],
+            };
+          });
+
+          const importedTeamNames = new Set<string>();
+          const matchTeamAvatars = new Map<string, string>();
+          for (const team of subscriptionTeams) {
+            if (team.name && team.name !== "TBD")
+              importedTeamNames.add(team.name);
           }
-          if (match.team2Name && match.team2Avatar) {
-            matchTeamAvatars.set(match.team2Name, match.team2Avatar);
-          }
-          for (const teamName of [match.team1Name, match.team2Name]) {
-            if (teamName && teamName !== "TBA" && teamName !== "TBD") {
-              importedTeamNames.add(teamName);
+          for (const match of matches) {
+            if (match.team1Name && match.team1Avatar) {
+              matchTeamAvatars.set(match.team1Name, match.team1Avatar);
+            }
+            if (match.team2Name && match.team2Avatar) {
+              matchTeamAvatars.set(match.team2Name, match.team2Avatar);
+            }
+            for (const teamName of [match.team1Name, match.team2Name]) {
+              if (teamName && teamName !== "TBA" && teamName !== "TBD") {
+                importedTeamNames.add(teamName);
+              }
             }
           }
-        }
 
-        const fallbackCaptain = await tx.user.findFirst({
-          orderBy: { createdAt: "asc" },
-          select: { id: true },
-        });
-        const importedTeams = new Map<string, { id: string; name: string }>();
-        const teamFaceitIds = new Map<string, string>();
-        for (const teamName of importedTeamNames) {
-          const subscriptionTeam = subscriptionTeams.find(
-            (team) => team.name === teamName,
-          );
-          const upsertedTeam = await tx.team.upsert({
-            where: { name: teamName },
-            update: {
-              logo:
-                subscriptionTeam?.avatar ||
-                matchTeamAvatars.get(teamName) ||
-                matchTeamSnapshots.get(teamName)?.avatar ||
-                null,
-            },
-            create: {
-              name: teamName,
-              captainId: fallbackCaptain?.id || "placeholder-captain",
-              logo:
-                subscriptionTeam?.avatar ||
-                matchTeamAvatars.get(teamName) ||
-                matchTeamSnapshots.get(teamName)?.avatar ||
-                null,
-            },
-          });
-          importedTeams.set(teamName, {
-            id: upsertedTeam.id,
-            name: upsertedTeam.name,
-          });
-          const faceitTeamId =
-            subscriptionTeam?.faceitId ||
-            matchTeamSnapshots.get(teamName)?.faceitId;
-          if (faceitTeamId) teamFaceitIds.set(teamName, String(faceitTeamId));
-
-          const subscriptionRoster = subscriptionTeam?.roster;
-          const roster =
-            Array.isArray(subscriptionRoster) && subscriptionRoster.length > 0
-              ? subscriptionRoster
-              : matchTeamSnapshots.get(teamName)?.roster || [];
-          for (const player of roster) {
-            const faceitId =
-              player?.player_id ||
-              player?.id ||
-              player?.guid ||
-              player?.user_id;
-            const nickname = player?.nickname || player?.name;
-            if (!faceitId || !nickname) continue;
-            await tx.player.upsert({
-              where: {
-                teamId_faceitId: {
-                  teamId: upsertedTeam.id,
-                  faceitId: String(faceitId),
-                },
-              },
-              update: {
-                nickname: String(nickname),
-                avatar: player?.avatar || player?.avatar_url || null,
-                skillLevel:
-                  player?.game_skill_level == null
-                    ? null
-                    : Number(player.game_skill_level),
-                faceitElo:
-                  player?.faceit_elo == null ? null : Number(player.faceit_elo),
-              },
-              create: {
-                teamId: upsertedTeam.id,
-                faceitId: String(faceitId),
-                nickname: String(nickname),
-                avatar: player?.avatar || player?.avatar_url || null,
-                skillLevel:
-                  player?.game_skill_level == null
-                    ? null
-                    : Number(player.game_skill_level),
-                faceitElo:
-                  player?.faceit_elo == null ? null : Number(player.faceit_elo),
-              },
-            });
-          }
-        }
-
-        if (importedTeams.size > 0) {
-          await tx.tournament.update({
-            where: { id: saved.id },
-            data: {
-              teams: {
-                connect: Array.from(importedTeams.values()).map((team) => ({
-                  id: team.id,
-                })),
-              },
-            },
-          });
-        }
-
-        await tx.match.deleteMany({ where: { tournamentId: saved.id } });
-        for (const match of matches) {
-          const safeRound = Number.isFinite(Number(match.round))
-            ? Number(match.round)
-            : 0;
-          const team1Id = importedTeams.get(match.team1Name)?.id || null;
-          const team2Id = match.team2Name
-            ? importedTeams.get(match.team2Name)?.id || null
-            : null;
-          await tx.match.upsert({
-            where: { faceitId: match.faceitId },
-            update: {
-              tournamentId: saved.id,
-              faceitId: match.faceitId,
-              team1Id,
-              team2Id,
-              team1Score: match.team1Score,
-              team2Score: match.team2Score,
-              round: safeRound,
-              bracketPosition: match.bracketPosition,
-              status: match.status,
-              scheduledTime: match.scheduledTime,
-            },
-            create: {
-              tournamentId: saved.id,
-              faceitId: match.faceitId,
-              team1Id,
-              team2Id,
-              team1Score: match.team1Score,
-              team2Score: match.team2Score,
-              round: safeRound,
-              bracketPosition: match.bracketPosition,
-              status: match.status,
-              scheduledTime: match.scheduledTime,
-            },
-          });
-
-          const importedMatch = await tx.match.findUnique({
-            where: { faceitId: match.faceitId },
+          const fallbackCaptain = await tx.user.findFirst({
+            orderBy: { createdAt: "asc" },
             select: { id: true },
           });
-          if (!importedMatch) continue;
-          for (const team of [
-            { name: match.team1Name, faceitId: match.team1Id },
-            { name: match.team2Name, faceitId: match.team2Id },
-          ]) {
-            if (!team.name || !team.faceitId) continue;
-            const localTeam = importedTeams.get(team.name);
-            if (!localTeam) continue;
-            const localPlayers = await tx.player.findMany({
-              where: { teamId: localTeam.id },
-              select: { id: true, faceitId: true },
+          const importedTeams = new Map<string, { id: string; name: string }>();
+          const teamFaceitIds = new Map<string, string>();
+          for (const teamName of importedTeamNames) {
+            const subscriptionTeam = subscriptionTeams.find(
+              (team) => team.name === teamName,
+            );
+            const upsertedTeam = await tx.team.upsert({
+              where: { name: teamName },
+              update: {
+                logo:
+                  subscriptionTeam?.avatar ||
+                  matchTeamAvatars.get(teamName) ||
+                  matchTeamSnapshots.get(teamName)?.avatar ||
+                  null,
+              },
+              create: {
+                name: teamName,
+                captainId: fallbackCaptain?.id || "placeholder-captain",
+                logo:
+                  subscriptionTeam?.avatar ||
+                  matchTeamAvatars.get(teamName) ||
+                  matchTeamSnapshots.get(teamName)?.avatar ||
+                  null,
+              },
             });
-            try {
-              const stats = await this.getMatchStats(match.faceitId);
-              const statsTeam = (stats?.rounds?.[0]?.teams || []).find(
-                (entry: any) =>
-                  String(entry?.team_id || entry?.id || "") ===
-                  String(team.faceitId),
-              );
-              for (const player of statsTeam?.players || []) {
-                const localPlayer = localPlayers.find(
-                  (entry) =>
-                    entry.faceitId ===
-                    String(player?.player_id || player?.id || ""),
-                );
-                if (!localPlayer) continue;
-                const playerStats = player?.player_stats || {};
-                const statValue = (key: string) =>
-                  Math.max(
-                    0,
-                    Math.trunc(
-                      Number(
-                        playerStats[key] ?? playerStats[key.toLowerCase()] ?? 0,
-                      ) || 0,
-                    ),
-                  );
-                await tx.playerMatchStat.upsert({
-                  where: {
-                    playerId_matchId: {
-                      playerId: localPlayer.id,
-                      matchId: importedMatch.id,
-                    },
-                  },
-                  update: {
-                    kills: statValue("Kills"),
-                    deaths: statValue("Deaths"),
-                    assists: statValue("Assists"),
-                  },
-                  create: {
-                    playerId: localPlayer.id,
-                    matchId: importedMatch.id,
-                    kills: statValue("Kills"),
-                    deaths: statValue("Deaths"),
-                    assists: statValue("Assists"),
-                  },
-                });
-              }
-            } catch (error) {
-              console.warn(
-                `FACEIT match stats persistence failed for ${match.faceitId}: ${error instanceof Error ? error.message : String(error)}`,
-              );
-            }
-          }
-        }
-
-        for (const [teamName, localTeam] of importedTeams) {
-          const playerCount = await tx.player.count({
-            where: { teamId: localTeam.id },
-          });
-          if (playerCount > 0) continue;
-
-          const relatedMatch = await tx.match.findFirst({
-            where: {
-              tournamentId: saved.id,
-              OR: [{ team1Id: localTeam.id }, { team2Id: localTeam.id }],
-            },
-          });
-          if (!relatedMatch?.faceitId) continue;
-
-          try {
-            const stats = await this.getMatchStats(relatedMatch.faceitId);
-            const statsTeams = stats?.rounds?.[0]?.teams || [];
-            const expectedFaceitId = teamFaceitIds.get(teamName);
-            const statsTeam = statsTeams.find((statsFaction: any) => {
-              const statsTeamId = String(
-                statsFaction?.team_id || statsFaction?.id || "",
-              );
-              const statsName = String(
-                statsFaction?.name || statsFaction?.nickname || "",
-              ).trim();
-              return (
-                (expectedFaceitId && statsTeamId === expectedFaceitId) ||
-                statsName === teamName
-              );
+            importedTeams.set(teamName, {
+              id: upsertedTeam.id,
+              name: upsertedTeam.name,
             });
-            for (const player of statsTeam?.players || []) {
-              const faceitId = player?.player_id || player?.id;
+            const faceitTeamId =
+              subscriptionTeam?.faceitId ||
+              matchTeamSnapshots.get(teamName)?.faceitId;
+            if (faceitTeamId) teamFaceitIds.set(teamName, String(faceitTeamId));
+
+            const subscriptionRoster = subscriptionTeam?.roster;
+            const roster =
+              Array.isArray(subscriptionRoster) && subscriptionRoster.length > 0
+                ? subscriptionRoster
+                : matchTeamSnapshots.get(teamName)?.roster || [];
+            for (const player of roster) {
+              const faceitId =
+                player?.player_id ||
+                player?.id ||
+                player?.guid ||
+                player?.user_id;
               const nickname = player?.nickname || player?.name;
               if (!faceitId || !nickname) continue;
               await tx.player.upsert({
                 where: {
                   teamId_faceitId: {
-                    teamId: localTeam.id,
+                    teamId: upsertedTeam.id,
                     faceitId: String(faceitId),
                   },
                 },
                 update: {
                   nickname: String(nickname),
-                  avatar: player?.avatar || null,
+                  avatar: player?.avatar || player?.avatar_url || null,
                   skillLevel:
                     player?.game_skill_level == null
                       ? null
@@ -817,10 +635,10 @@ export class FaceitService {
                       : Number(player.faceit_elo),
                 },
                 create: {
-                  teamId: localTeam.id,
+                  teamId: upsertedTeam.id,
                   faceitId: String(faceitId),
                   nickname: String(nickname),
-                  avatar: player?.avatar || null,
+                  avatar: player?.avatar || player?.avatar_url || null,
                   skillLevel:
                     player?.game_skill_level == null
                       ? null
@@ -832,14 +650,211 @@ export class FaceitService {
                 },
               });
             }
-          } catch (error) {
-            console.warn(
-              `FACEIT stats roster fallback failed for ${teamName}: ${error instanceof Error ? error.message : String(error)}`,
-            );
           }
-        }
-        return saved;
-      });
+
+          if (importedTeams.size > 0) {
+            await tx.tournament.update({
+              where: { id: saved.id },
+              data: {
+                teams: {
+                  connect: Array.from(importedTeams.values()).map((team) => ({
+                    id: team.id,
+                  })),
+                },
+              },
+            });
+          }
+
+          await tx.match.deleteMany({ where: { tournamentId: saved.id } });
+          for (const match of matches) {
+            const safeRound = Number.isFinite(Number(match.round))
+              ? Number(match.round)
+              : 0;
+            const team1Id = importedTeams.get(match.team1Name)?.id || null;
+            const team2Id = match.team2Name
+              ? importedTeams.get(match.team2Name)?.id || null
+              : null;
+            await tx.match.upsert({
+              where: { faceitId: match.faceitId },
+              update: {
+                tournamentId: saved.id,
+                faceitId: match.faceitId,
+                team1Id,
+                team2Id,
+                team1Score: match.team1Score,
+                team2Score: match.team2Score,
+                round: safeRound,
+                bracketPosition: match.bracketPosition,
+                status: match.status,
+                scheduledTime: match.scheduledTime,
+              },
+              create: {
+                tournamentId: saved.id,
+                faceitId: match.faceitId,
+                team1Id,
+                team2Id,
+                team1Score: match.team1Score,
+                team2Score: match.team2Score,
+                round: safeRound,
+                bracketPosition: match.bracketPosition,
+                status: match.status,
+                scheduledTime: match.scheduledTime,
+              },
+            });
+
+            const importedMatch = await tx.match.findUnique({
+              where: { faceitId: match.faceitId },
+              select: { id: true },
+            });
+            if (!importedMatch) continue;
+            for (const team of [
+              { name: match.team1Name, faceitId: match.team1Id },
+              { name: match.team2Name, faceitId: match.team2Id },
+            ]) {
+              if (!team.name || !team.faceitId) continue;
+              const localTeam = importedTeams.get(team.name);
+              if (!localTeam) continue;
+              const localPlayers = await tx.player.findMany({
+                where: { teamId: localTeam.id },
+                select: { id: true, faceitId: true },
+              });
+              try {
+                const stats = await this.getMatchStats(match.faceitId);
+                const statsTeam = (stats?.rounds?.[0]?.teams || []).find(
+                  (entry: any) =>
+                    String(entry?.team_id || entry?.id || "") ===
+                    String(team.faceitId),
+                );
+                for (const player of statsTeam?.players || []) {
+                  const localPlayer = localPlayers.find(
+                    (entry) =>
+                      entry.faceitId ===
+                      String(player?.player_id || player?.id || ""),
+                  );
+                  if (!localPlayer) continue;
+                  const playerStats = player?.player_stats || {};
+                  const statValue = (key: string) =>
+                    Math.max(
+                      0,
+                      Math.trunc(
+                        Number(
+                          playerStats[key] ??
+                            playerStats[key.toLowerCase()] ??
+                            0,
+                        ) || 0,
+                      ),
+                    );
+                  await tx.playerMatchStat.upsert({
+                    where: {
+                      playerId_matchId: {
+                        playerId: localPlayer.id,
+                        matchId: importedMatch.id,
+                      },
+                    },
+                    update: {
+                      kills: statValue("Kills"),
+                      deaths: statValue("Deaths"),
+                      assists: statValue("Assists"),
+                    },
+                    create: {
+                      playerId: localPlayer.id,
+                      matchId: importedMatch.id,
+                      kills: statValue("Kills"),
+                      deaths: statValue("Deaths"),
+                      assists: statValue("Assists"),
+                    },
+                  });
+                }
+              } catch (error) {
+                console.warn(
+                  `FACEIT match stats persistence failed for ${match.faceitId}: ${error instanceof Error ? error.message : String(error)}`,
+                );
+              }
+            }
+          }
+
+          for (const [teamName, localTeam] of importedTeams) {
+            const playerCount = await tx.player.count({
+              where: { teamId: localTeam.id },
+            });
+            if (playerCount > 0) continue;
+
+            const relatedMatch = await tx.match.findFirst({
+              where: {
+                tournamentId: saved.id,
+                OR: [{ team1Id: localTeam.id }, { team2Id: localTeam.id }],
+              },
+            });
+            if (!relatedMatch?.faceitId) continue;
+
+            try {
+              const stats = await this.getMatchStats(relatedMatch.faceitId);
+              const statsTeams = stats?.rounds?.[0]?.teams || [];
+              const expectedFaceitId = teamFaceitIds.get(teamName);
+              const statsTeam = statsTeams.find((statsFaction: any) => {
+                const statsTeamId = String(
+                  statsFaction?.team_id || statsFaction?.id || "",
+                );
+                const statsName = String(
+                  statsFaction?.name || statsFaction?.nickname || "",
+                ).trim();
+                return (
+                  (expectedFaceitId && statsTeamId === expectedFaceitId) ||
+                  statsName === teamName
+                );
+              });
+              for (const player of statsTeam?.players || []) {
+                const faceitId = player?.player_id || player?.id;
+                const nickname = player?.nickname || player?.name;
+                if (!faceitId || !nickname) continue;
+                await tx.player.upsert({
+                  where: {
+                    teamId_faceitId: {
+                      teamId: localTeam.id,
+                      faceitId: String(faceitId),
+                    },
+                  },
+                  update: {
+                    nickname: String(nickname),
+                    avatar: player?.avatar || null,
+                    skillLevel:
+                      player?.game_skill_level == null
+                        ? null
+                        : Number(player.game_skill_level),
+                    faceitElo:
+                      player?.faceit_elo == null
+                        ? null
+                        : Number(player.faceit_elo),
+                  },
+                  create: {
+                    teamId: localTeam.id,
+                    faceitId: String(faceitId),
+                    nickname: String(nickname),
+                    avatar: player?.avatar || null,
+                    skillLevel:
+                      player?.game_skill_level == null
+                        ? null
+                        : Number(player.game_skill_level),
+                    faceitElo:
+                      player?.faceit_elo == null
+                        ? null
+                        : Number(player.faceit_elo),
+                  },
+                });
+              }
+            } catch (error) {
+              console.warn(
+                `FACEIT stats roster fallback failed for ${teamName}: ${error instanceof Error ? error.message : String(error)}`,
+              );
+            }
+          }
+          return saved;
+        },
+        {
+          maxWait: 5000,
+          timeout: 20000,
+        },
+      );
 
       return {
         tournament,

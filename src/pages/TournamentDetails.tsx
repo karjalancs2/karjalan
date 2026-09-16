@@ -198,7 +198,12 @@ export default function TournamentDetails() {
         const positionDifference =
           (Number(a?.bracketPosition) || Number.MAX_SAFE_INTEGER) -
           (Number(b?.bracketPosition) || Number.MAX_SAFE_INTEGER);
-        return positionDifference || String(a?.faceitId || a?.id || "").localeCompare(String(b?.faceitId || b?.id || ""));
+        return (
+          positionDifference ||
+          String(a?.faceitId || a?.id || "").localeCompare(
+            String(b?.faceitId || b?.id || ""),
+          )
+        );
       }),
     }));
   const baseSlotHeight = 100;
