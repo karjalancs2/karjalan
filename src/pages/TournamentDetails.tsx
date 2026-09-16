@@ -188,9 +188,19 @@ export default function TournamentDetails() {
         return acc;
       }
       acc.push({ round: roundKey, matches: [match] });
+      acc.push({ round: roundKey, matches: [match] });
       return acc;
     }, [])
-    .sort((a, b) => a.round - b.round);
+    .sort((a, b) => a.round - b.round)
+    .map((group) => ({
+      ...group,
+      matches: [...group.matches].sort((a, b) => {
+        const positionDifference =
+          (Number(a?.bracketPosition) || Number.MAX_SAFE_INTEGER) -
+          (Number(b?.bracketPosition) || Number.MAX_SAFE_INTEGER);
+        return positionDifference || String(a?.faceitId || a?.id || "").localeCompare(String(b?.faceitId || b?.id || ""));
+      }),
+    }));
   const baseSlotHeight = 100;
   const normalizedStatus = String(
     tournament?.status ?? "upcoming",

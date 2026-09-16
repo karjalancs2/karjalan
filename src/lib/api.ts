@@ -82,14 +82,27 @@ export const api = {
     }
   },
   getMatchStats: async (faceitId: string) => {
-    const res = await apiFetch(`/api/matches/${encodeURIComponent(faceitId)}/stats`);
+    const res = await apiFetch(
+      `/api/matches/${encodeURIComponent(faceitId)}/stats`,
+    );
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw apiError(data.error || "Failed to load match stats", res.status);
+    if (!res.ok)
+      throw apiError(data.error || "Failed to load match stats", res.status);
     return data;
   },
   getTeams: async () => {
     try {
       const res = await apiFetch("/api/teams");
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  },
+  getTopPlayers: async () => {
+    try {
+      const res = await apiFetch("/api/players/top");
       if (!res.ok) return [];
       const data = await res.json();
       return Array.isArray(data) ? data : [];

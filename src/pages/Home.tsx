@@ -49,50 +49,7 @@ export default function Home() {
       );
       setTeams(await api.getTeams());
       const playerTotals = new Map<string, any>();
-      await Promise.all(
-        activeMatches.slice(0, 12).map(async (match: Match) => {
-          const faceitMatchId =
-            (match as any)?.faceitId || match?.faceitMatchId;
-          if (!faceitMatchId) return;
-          try {
-            const stats = await api.getMatchStats(faceitMatchId);
-            for (const team of stats?.rounds?.[0]?.teams || []) {
-              for (const player of team?.players || []) {
-                const id = String(player?.player_id || player?.nickname || "");
-                if (!id) continue;
-                const raw = player?.player_stats || {};
-                const kills = Number(raw.Kills ?? raw.kills ?? 0) || 0;
-                const deaths = Number(raw.Deaths ?? raw.deaths ?? 0) || 0;
-                const assists = Number(raw.Assists ?? raw.assists ?? 0) || 0;
-                const current = playerTotals.get(id) || {
-                  id,
-                  nickname: player?.nickname || id,
-                  avatar: player?.avatar,
-                  teamId: team?.team_id,
-                  kills: 0,
-                  deaths: 0,
-                  assists: 0,
-                };
-                current.kills += kills;
-                current.deaths += deaths;
-                current.assists += assists;
-                playerTotals.set(id, current);
-              }
-            }
-          } catch {
-            // A missing stats response should not block the homepage.
-          }
-        }),
-      );
-      setTopPlayers(
-        Array.from(playerTotals.values())
-          .map((player) => ({
-            ...player,
-            kd: player.deaths > 0 ? player.kills / player.deaths : player.kills,
-          }))
-          .sort((a, b) => b.kills - a.kills || b.kd - a.kd)
-          .slice(0, 3),
-      );
+      setTopPlayers(await api.getTopPlayers());
     }
     loadData();
   }, []);

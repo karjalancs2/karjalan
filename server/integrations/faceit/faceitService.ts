@@ -67,6 +67,18 @@ function getMatchRound(match: any): number {
   return 0;
 }
 
+function getBracketPosition(match: any): number | null {
+  const rawPosition =
+    match?.position ??
+    match?.round_position ??
+    match?.bracket_position ??
+    match?.bracket?.position ??
+    match?.bracket?.round_position ??
+    match?.order;
+  const position = Number(rawPosition);
+  return Number.isFinite(position) ? Math.trunc(position) : null;
+}
+
 function getTeamIds(match: any): string[] {
   const teams = match?.teams || match?.factions || {};
   const entries = Array.isArray(teams) ? teams : Object.values(teams);
@@ -103,7 +115,10 @@ function isByeFaction(faction: any): boolean {
   );
 }
 
-export function normalizeFaceitMatch(match: any): any | null {
+export function normalizeFaceitMatch(
+  match: any,
+  fallbackPosition?: number,
+): any | null {
   const faceitId = match?.match_id || match?.id;
   if (typeof faceitId !== "string" || !faceitId) return null;
 
@@ -140,6 +155,7 @@ export function normalizeFaceitMatch(match: any): any | null {
   const team1Score = Number(rawScore?.faction1 ?? rawScore?.team1 ?? 0);
   const team2Score = Number(rawScore?.faction2 ?? rawScore?.team2 ?? 0);
   const roundNumber = getMatchRound(match);
+  const bracketPosition = getBracketPosition(match) ?? fallbackPosition ?? null;
   const scheduledAt =
     match?.scheduled_at != null ? Number(match.scheduled_at) : null;
   const parsedScheduledTime =
@@ -166,6 +182,7 @@ export function normalizeFaceitMatch(match: any): any | null {
     team1Score: Number.isFinite(team1Score) ? Math.trunc(team1Score) : 0,
     team2Score: Number.isFinite(team2Score) ? Math.trunc(team2Score) : 0,
     round: roundNumber,
+    bracketPosition,
     roundLabel: typeof stage === "string" ? stage : "Unassigned",
     status: typeof match?.status === "string" ? match.status : "upcoming",
     scheduledTime:
@@ -211,6 +228,7 @@ function groupMatchesByStage(matches: any[], stages: any[]): any[] {
       team1Name: match.team1Name,
       team2Name: match.team2Name,
       round: roundNumber || 0,
+      bracketPosition: match.bracketPosition,
       team1Score: match.team1Score,
       team2Score: match.team2Score,
     });
@@ -409,7 +427,7 @@ export class FaceitService {
     );
     const matches = Array.isArray(safeMatches)
       ? safeMatches
-          .map(normalizeFaceitMatch)
+          .map((match, index) => normalizeFaceitMatch(match, index + 1))
           .filter((match): match is any => match !== null)
       : [];
     const matchTeamSnapshots = new Map<
@@ -658,6 +676,7 @@ export class FaceitService {
               team1Score: match.team1Score,
               team2Score: match.team2Score,
               round: safeRound,
+              bracketPosition: match.bracketPosition,
               status: match.status,
               scheduledTime: match.scheduledTime,
             },
@@ -669,10 +688,79 @@ export class FaceitService {
               team1Score: match.team1Score,
               team2Score: match.team2Score,
               round: safeRound,
+              bracketPosition: match.bracketPosition,
               status: match.status,
               scheduledTime: match.scheduledTime,
             },
           });
+
+          const importedMatch = await tx.match.findUnique({
+            where: { faceitId: match.faceitId },
+            select: { id: true },
+          });
+          if (!importedMatch) continue;
+          for (const team of [
+            { name: match.team1Name, faceitId: match.team1Id },
+            { name: match.team2Name, faceitId: match.team2Id },
+          ]) {
+            if (!team.name || !team.faceitId) continue;
+            const localTeam = importedTeams.get(team.name);
+            if (!localTeam) continue;
+            const localPlayers = await tx.player.findMany({
+              where: { teamId: localTeam.id },
+              select: { id: true, faceitId: true },
+            });
+            try {
+              const stats = await this.getMatchStats(match.faceitId);
+              const statsTeam = (stats?.rounds?.[0]?.teams || []).find(
+                (entry: any) =>
+                  String(entry?.team_id || entry?.id || "") ===
+                  String(team.faceitId),
+              );
+              for (const player of statsTeam?.players || []) {
+                const localPlayer = localPlayers.find(
+                  (entry) =>
+                    entry.faceitId ===
+                    String(player?.player_id || player?.id || ""),
+                );
+                if (!localPlayer) continue;
+                const playerStats = player?.player_stats || {};
+                const statValue = (key: string) =>
+                  Math.max(
+                    0,
+                    Math.trunc(
+                      Number(
+                        playerStats[key] ?? playerStats[key.toLowerCase()] ?? 0,
+                      ) || 0,
+                    ),
+                  );
+                await tx.playerMatchStat.upsert({
+                  where: {
+                    playerId_matchId: {
+                      playerId: localPlayer.id,
+                      matchId: importedMatch.id,
+                    },
+                  },
+                  update: {
+                    kills: statValue("Kills"),
+                    deaths: statValue("Deaths"),
+                    assists: statValue("Assists"),
+                  },
+                  create: {
+                    playerId: localPlayer.id,
+                    matchId: importedMatch.id,
+                    kills: statValue("Kills"),
+                    deaths: statValue("Deaths"),
+                    assists: statValue("Assists"),
+                  },
+                });
+              }
+            } catch (error) {
+              console.warn(
+                `FACEIT match stats persistence failed for ${match.faceitId}: ${error instanceof Error ? error.message : String(error)}`,
+              );
+            }
+          }
         }
 
         for (const [teamName, localTeam] of importedTeams) {

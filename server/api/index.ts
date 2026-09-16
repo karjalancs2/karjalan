@@ -72,7 +72,11 @@ async function isAdmin(userId: string) {
     where: { id: userId },
     select: { role: true },
   });
-  return String(user?.role ?? "").trim().toUpperCase() === "ADMIN";
+  return (
+    String(user?.role ?? "")
+      .trim()
+      .toUpperCase() === "ADMIN"
+  );
 }
 
 function isLobbyMember(
@@ -141,6 +145,50 @@ apiRouter.get("/users", async (_req, res) => {
   } catch (error) {
     console.error("Failed to fetch users:", error);
     return res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+apiRouter.get("/players/top", async (_req, res) => {
+  try {
+    const players = await prisma.player.findMany({
+      include: {
+        team: { select: { id: true, name: true } },
+        playerStats: true,
+      },
+    });
+    const topPlayers = players
+      .map((player) => {
+        const kills = player.playerStats.reduce(
+          (total, stat) => total + stat.kills,
+          0,
+        );
+        const deaths = player.playerStats.reduce(
+          (total, stat) => total + stat.deaths,
+          0,
+        );
+        return {
+          id: player.id,
+          nickname: player.nickname,
+          avatar: player.avatar,
+          teamId: player.team.id,
+          teamName: player.team.name,
+          kills,
+          deaths,
+          kd: deaths > 0 ? kills / deaths : kills,
+        };
+      })
+      .filter((player) => player.kills >= 30)
+      .sort(
+        (a, b) =>
+          b.kd - a.kd ||
+          b.kills - a.kills ||
+          a.nickname.localeCompare(b.nickname),
+      )
+      .slice(0, 3);
+    return res.json(topPlayers);
+  } catch (error) {
+    console.error("Failed to load top players:", error);
+    return res.status(500).json({ error: "Failed to load top players" });
   }
 });
 
