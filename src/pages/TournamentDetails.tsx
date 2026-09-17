@@ -208,18 +208,21 @@ export default function TournamentDetails() {
       }),
     }));
   const firstRoundMatchCount = groupedRounds[0]?.matches.length || 1;
-  const roundsWithSlots = groupedRounds.map((group: any, roundIndex: number) => {
-    const expectedSlotCount = Math.max(
-      group.matches.length,
-      Math.ceil(firstRoundMatchCount / 2 ** roundIndex),
-    );
-    return {
-      ...group,
-      slots: Array.from({ length: expectedSlotCount }, (_, index) =>
-        group.matches[index] || null,
-      ),
-    };
-  });
+  const roundsWithSlots = groupedRounds.map(
+    (group: any, roundIndex: number) => {
+      const expectedSlotCount = Math.max(
+        group.matches.length,
+        Math.ceil(firstRoundMatchCount / 2 ** roundIndex),
+      );
+      return {
+        ...group,
+        slots: Array.from(
+          { length: expectedSlotCount },
+          (_, index) => group.matches[index] || null,
+        ),
+      };
+    },
+  );
   const normalizedStatus = String(
     tournament?.status ?? "upcoming",
   ).toLowerCase();
@@ -446,14 +449,14 @@ export default function TournamentDetails() {
                 No bracket data available for this event yet.
               </div>
             ) : (
-              <div className="min-w-[1000px] min-h-[1000px] flex flex-row items-stretch gap-8 overflow-x-auto overflow-y-auto pb-4">
+              <div className="min-w-[1200px] w-max min-h-[1000px] flex flex-row items-stretch gap-8 overflow-x-auto overflow-y-auto pb-4">
                 {roundsWithSlots.map((group: any, roundIndex: number) => (
                   <div
                     key={group.round}
                     className="flex h-full min-h-[1000px] min-w-[240px] flex-1 flex-col justify-around"
                   >
                     <div className="mb-4 border-b border-neutral-800 pb-3 text-center">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-300">
+                      <h3 className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-neutral-300">
                         {group.matches.length === 4
                           ? "Quarter-finals"
                           : group.matches.length === 2
@@ -469,84 +472,95 @@ export default function TournamentDetails() {
                       </p>
                     </div>
                     <div className="flex min-h-0 flex-1 flex-col justify-around">
-                    {group.slots.map((m: any, matchIndex: number) => {
-                      if (!m) {
-                        return <div key={`empty-${group.round}-${matchIndex}`} className="bracket-slot h-16 opacity-0" aria-hidden="true" />;
-                      }
-                      const t1 = getTeam(m?.team1Id) || {
-                        name: safeString(m?.team1Name, "TBD") || "TBD",
-                      };
-                      const isBye =
-                        !m?.team2Id ||
-                        String(m?.team2Name || "").toLowerCase() === "bye";
-                      const t2 = isBye
-                        ? null
-                        : getTeam(m?.team2Id) || {
-                            name: safeString(m?.team2Name, "TBD") || "TBD",
-                          };
-                      return (
-                        <div
-                          key={m?.id}
-                          className={`bracket-slot flex min-h-0 flex-1 flex-col justify-center ${
-                            matchIndex % 2 === 0
-                              ? "bracket-slot--top"
-                              : "bracket-slot--bottom"
-                          } ${roundIndex === 0 ? "bracket-slot--first" : ""} ${
-                            roundIndex === groupedRounds.length - 1
-                              ? "bracket-slot--last"
-                              : ""
-                          }`}
-                        >
-                          <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
-                            MATCH {Number(m?.bracketPosition) || matchIndex + 1}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedMatch(m)}
-                            className="bracket-card w-full rounded border border-neutral-800 bg-[#121212] text-sm font-medium overflow-hidden"
+                      {group.slots.map((m: any, matchIndex: number) => {
+                        if (!m) {
+                          return (
+                            <div
+                              key={`empty-${group.round}-${matchIndex}`}
+                              className="bracket-slot h-16 opacity-0"
+                              aria-hidden="true"
+                            />
+                          );
+                        }
+                        const t1 = getTeam(m?.team1Id) || {
+                          name: safeString(m?.team1Name, "TBD") || "TBD",
+                        };
+                        const isBye =
+                          !m?.team2Id ||
+                          String(m?.team2Name || "").toLowerCase() === "bye";
+                        const t2 = isBye
+                          ? null
+                          : getTeam(m?.team2Id) || {
+                              name: safeString(m?.team2Name, "TBD") || "TBD",
+                            };
+                        return (
+                          <div
+                            key={m?.id}
+                            className={`bracket-slot flex min-h-0 flex-1 flex-col justify-center ${
+                              matchIndex % 2 === 0
+                                ? "bracket-slot--top"
+                                : "bracket-slot--bottom"
+                            } ${roundIndex > 0 ? "bracket-slot--incoming" : ""} ${
+                              roundIndex < roundsWithSlots.length - 1
+                                ? "bracket-slot--outgoing"
+                                : ""
+                            }`}
                           >
-                            <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
-                              <span className="flex items-center gap-2">
-                                <TeamLogo team={t1} size="w-5 h-5" />
-                                {safeString(t1?.name, "TBD") || "TBD"}
-                              </span>
-                              <span
-                                className={
-                                  (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
-                                    ? "text-white"
-                                    : "text-neutral-500"
-                                }
-                              >
-                                {isBye ? "W" : (m?.team1Score ?? 0)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
-                              <span className="flex items-center gap-2">
-                                {!isBye && (
-                                  <TeamLogo team={t2} size="w-5 h-5" />
-                                )}
-                                <span
-                                  className={isBye ? "text-neutral-500" : ""}
-                                >
-                                  {isBye
-                                    ? "BYE"
-                                    : safeString(t2?.name, "TBD") || "TBD"}
+                            <span className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
+                              MATCH {groupedRounds
+                                .slice(0, roundIndex)
+                                .reduce(
+                                  (total, round) => total + round.matches.length,
+                                  0,
+                                ) + matchIndex + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedMatch(m)}
+                              className="bracket-card w-full rounded border border-neutral-800 bg-[#121212] text-sm font-medium overflow-hidden"
+                            >
+                              <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
+                                <span className="flex items-center gap-2">
+                                  <TeamLogo team={t1} size="w-5 h-5" />
+                                  {safeString(t1?.name, "TBD") || "TBD"}
                                 </span>
-                              </span>
-                              <span
-                                className={
-                                  (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
-                                    ? "text-white"
-                                    : "text-neutral-500"
-                                }
-                              >
-                                {isBye ? "-" : (m?.team2Score ?? 0)}
-                              </span>
-                            </div>
-                          </button>
-                        </div>
-                      );
-                    })}
+                                <span
+                                  className={
+                                    (m?.team1Score ?? 0) > (m?.team2Score ?? 0)
+                                      ? "text-white"
+                                      : "text-neutral-500"
+                                  }
+                                >
+                                  {isBye ? "W" : (m?.team1Score ?? 0)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
+                                <span className="flex items-center gap-2">
+                                  {!isBye && (
+                                    <TeamLogo team={t2} size="w-5 h-5" />
+                                  )}
+                                  <span
+                                    className={isBye ? "text-neutral-500" : ""}
+                                  >
+                                    {isBye
+                                      ? "BYE"
+                                      : safeString(t2?.name, "TBD") || "TBD"}
+                                  </span>
+                                </span>
+                                <span
+                                  className={
+                                    (m?.team2Score ?? 0) > (m?.team1Score ?? 0)
+                                      ? "text-white"
+                                      : "text-neutral-500"
+                                  }
+                                >
+                                  {isBye ? "-" : (m?.team2Score ?? 0)}
+                                </span>
+                              </div>
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

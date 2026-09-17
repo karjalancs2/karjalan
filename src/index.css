@@ -5,42 +5,42 @@
   overflow: visible;
 }
 
-.bracket-slot::before {
-  content: "";
-  position: absolute;
-  left: calc(100% + 24px);
-  width: 2px;
-  background: #66552b;
-  z-index: 0;
+.bracket-slot--top {
+  background: linear-gradient(#4b5563, #4b5563) no-repeat;
+  background-position: calc(100% + 20px) 50%;
+  background-size: 2px 50%;
 }
 
-.bracket-slot--top::before {
-  top: 50%;
-  height: 50%;
+.bracket-slot--bottom {
+  background: linear-gradient(#4b5563, #4b5563) no-repeat;
+  background-position: calc(100% + 20px) 0;
+  background-size: 2px 50%;
 }
 
-.bracket-slot--bottom::before {
-  top: 0;
-  height: 50%;
-}
-
+.bracket-slot::before,
 .bracket-slot::after {
   content: "";
   position: absolute;
   top: 50%;
-  left: 100%;
-  width: 24px;
+  width: 20px;
   height: 2px;
-  background: #66552b;
+  background: #4b5563;
   transform: translateY(-50%);
-  z-index: 0;
+  z-index: -1;
 }
 
-.bracket-card {
-  position: relative;
-  z-index: 1;
+.bracket-slot::before {
+  right: -20px;
 }
 
-.bracket-slot--last::after {
+.bracket-slot::after {
+  left: -20px;
+}
+
+.bracket-slot:not(.bracket-slot--outgoing)::before {
+  display: none;
+}
+
+.bracket-slot:not(.bracket-slot--incoming)::after {
   display: none;
 }
