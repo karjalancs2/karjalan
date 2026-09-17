@@ -308,14 +308,7 @@ export default function Home() {
               <Medal className="h-6 w-6 text-amber-400" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(topPlayers.length
-                ? topPlayers
-                : [
-                    { nickname: "Ei dataa", kills: 0, kd: 0 },
-                    { nickname: "Odottaa ottelua", kills: 0, kd: 0 },
-                    { nickname: "Odottaa ottelua", kills: 0, kd: 0 },
-                  ]
-              ).map((player: any, index: number) => {
+              {topPlayers.map((player: any, index: number) => {
                 const team = getTeam(player.teamId);
                 const rank = index + 1;
                 return (

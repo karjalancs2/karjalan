@@ -177,20 +177,19 @@ export default function TournamentDetails() {
       </section>
     );
   };
-  const groupedRounds = matchList
-    .reduce((acc: any[], match: any) => {
-      const roundKey = Number.isFinite(Number(match?.round))
-        ? Number(match.round)
-        : 0;
-      const group = acc.find((entry) => entry.round === roundKey);
+  const groupedRounds = Array.from<any>(
+    matchList.reduce((groups: Map<number, any>, match: any) => {
+      const parsedRound = Number(match?.round || match?.roundNumber);
+      const roundKey = Number.isFinite(parsedRound) ? parsedRound : 0;
+      const group = groups.get(roundKey);
       if (group) {
         group.matches.push(match);
-        return acc;
+      } else {
+        groups.set(roundKey, { round: roundKey, matches: [match] });
       }
-      acc.push({ round: roundKey, matches: [match] });
-      acc.push({ round: roundKey, matches: [match] });
-      return acc;
-    }, [])
+      return groups;
+    }, new Map<number, any>()).values(),
+  )
     .sort((a, b) => a.round - b.round)
     .map((group) => ({
       ...group,
@@ -206,7 +205,6 @@ export default function TournamentDetails() {
         );
       }),
     }));
-  const baseSlotHeight = 100;
   const normalizedStatus = String(
     tournament?.status ?? "upcoming",
   ).toLowerCase();
@@ -433,11 +431,11 @@ export default function TournamentDetails() {
                 No bracket data available for this event yet.
               </div>
             ) : (
-              <div className="min-w-[800px] min-h-[640px] flex flex-row items-stretch gap-8 overflow-x-auto pb-4">
+              <div className="min-w-[800px] h-[640px] flex flex-row items-stretch gap-8 overflow-x-auto overflow-y-auto pb-4">
                 {groupedRounds.map((group: any, roundIndex: number) => (
                   <div
                     key={group.round}
-                    className="flex h-full min-h-[640px] flex-col min-w-[220px]"
+                    className="flex h-full min-h-0 flex-col min-w-[220px]"
                   >
                     <h3 className="text-xs font-bold text-neutral-500 uppercase mb-2 text-center">
                       {group.round > 0 ? `Round ${group.round}` : "Unassigned"}
@@ -457,7 +455,7 @@ export default function TournamentDetails() {
                       return (
                         <div
                           key={m?.id}
-                          className={`bracket-slot flex flex-col justify-center ${
+                          className={`bracket-slot flex min-h-0 flex-1 flex-col justify-center ${
                             matchIndex % 2 === 0
                               ? "bracket-slot--top"
                               : "bracket-slot--bottom"
@@ -466,9 +464,6 @@ export default function TournamentDetails() {
                               ? "bracket-slot--last"
                               : ""
                           }`}
-                          style={{
-                            minHeight: `${baseSlotHeight * Math.pow(2, roundIndex)}px`,
-                          }}
                         >
                           <button
                             type="button"

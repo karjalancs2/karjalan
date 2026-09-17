@@ -156,25 +156,32 @@ apiRouter.get("/players/top", async (_req, res) => {
         playerStats: true,
       },
     });
-    const topPlayers = players
+    const playersWithStats = players.map((player) => {
+      const kills = player.playerStats.reduce(
+        (total, stat) => total + stat.kills,
+        0,
+      );
+      const deaths = player.playerStats.reduce(
+        (total, stat) => total + stat.deaths,
+        0,
+      );
+      return {
+        id: player.id,
+        nickname: player.nickname,
+        avatar: player.avatar,
+        teamId: player.team.id,
+        teamName: player.team.name,
+        kills,
+        deaths,
+        kd: deaths > 0 ? kills / deaths : kills,
+        faceitElo: player.faceitElo,
+        skillLevel: player.skillLevel,
+      };
+    });
+    const topPlayers = playersWithStats
       .map((player) => {
-        const kills = player.playerStats.reduce(
-          (total, stat) => total + stat.kills,
-          0,
-        );
-        const deaths = player.playerStats.reduce(
-          (total, stat) => total + stat.deaths,
-          0,
-        );
         return {
-          id: player.id,
-          nickname: player.nickname,
-          avatar: player.avatar,
-          teamId: player.team.id,
-          teamName: player.team.name,
-          kills,
-          deaths,
-          kd: deaths > 0 ? kills / deaths : kills,
+          ...player,
         };
       })
       .filter((player) => player.kills >= 30)
@@ -185,7 +192,19 @@ apiRouter.get("/players/top", async (_req, res) => {
           a.nickname.localeCompare(b.nickname),
       )
       .slice(0, 3);
-    return res.json(topPlayers);
+    if (topPlayers.length > 0) return res.json(topPlayers);
+
+    const fallbackPlayers = playersWithStats
+      .sort(
+        (a, b) =>
+          (b.faceitElo ?? b.skillLevel ?? 0) -
+            (a.faceitElo ?? a.skillLevel ?? 0) ||
+          (b.skillLevel ?? 0) - (a.skillLevel ?? 0) ||
+          a.nickname.localeCompare(b.nickname),
+      )
+      .slice(0, 3)
+      .map((player) => ({ ...player, kills: 0, deaths: 0, kd: 0 }));
+    return res.json(fallbackPlayers);
   } catch (error) {
     console.error("Failed to load top players:", error);
     return res.status(500).json({ error: "Failed to load top players" });
