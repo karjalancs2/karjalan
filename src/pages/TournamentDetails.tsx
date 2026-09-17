@@ -196,9 +196,11 @@ export default function TournamentDetails() {
     .map((group) => ({
       ...group,
       matches: [...group.matches].sort((a, b) => {
+        const positionA = Number(a?.bracketPosition);
+        const positionB = Number(b?.bracketPosition);
         const positionDifference =
-          (Number(a?.bracketPosition) || Number.MAX_SAFE_INTEGER) -
-          (Number(b?.bracketPosition) || Number.MAX_SAFE_INTEGER);
+          (Number.isFinite(positionA) ? positionA : Number.MAX_SAFE_INTEGER) -
+          (Number.isFinite(positionB) ? positionB : Number.MAX_SAFE_INTEGER);
         return (
           positionDifference ||
           String(a?.faceitId || a?.id || "").localeCompare(
@@ -455,7 +457,7 @@ export default function TournamentDetails() {
                     key={group.round}
                     className="flex h-full min-h-[1000px] min-w-[240px] flex-1 flex-col justify-around"
                   >
-                    <div className="mb-4 border-b border-neutral-800 pb-3 text-center">
+                    <div className="mb-4 min-w-[220px] border-b border-neutral-800 pb-3 text-center">
                       <h3 className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-neutral-300">
                         {group.matches.length === 4
                           ? "Quarter-finals"
@@ -472,7 +474,19 @@ export default function TournamentDetails() {
                       </p>
                     </div>
                     <div className="flex min-h-0 flex-1 flex-col justify-around">
-                      {group.slots.map((m: any, matchIndex: number) => {
+                      {Array.from({ length: Math.ceil(group.slots.length / 2) }, (_, pairIndex) => {
+                        const pair = group.slots.slice(pairIndex * 2, pairIndex * 2 + 2);
+                        return (
+                          <div
+                            key={`pair-${group.round}-${pairIndex}`}
+                            className={`bracket-match-pair relative flex min-h-0 flex-1 flex-col justify-around ${
+                              roundIndex < roundsWithSlots.length - 1
+                                ? "bracket-match-pair--outgoing"
+                                : ""
+                            }`}
+                          >
+                            {pair.map((m: any, pairMatchIndex: number) => {
+                              const matchIndex = pairIndex * 2 + pairMatchIndex;
                         if (!m) {
                           return (
                             <div
@@ -558,6 +572,9 @@ export default function TournamentDetails() {
                                 </span>
                               </div>
                             </button>
+                          </div>
+                        );
+                              })}
                           </div>
                         );
                       })}

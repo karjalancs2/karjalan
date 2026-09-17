@@ -5,36 +5,43 @@
   overflow: visible;
 }
 
-.bracket-slot--top {
-  background: linear-gradient(#4b5563, #4b5563) no-repeat;
-  background-position: calc(100% + 20px) 50%;
-  background-size: 2px 50%;
-}
-
-.bracket-slot--bottom {
-  background: linear-gradient(#4b5563, #4b5563) no-repeat;
-  background-position: calc(100% + 20px) 0;
-  background-size: 2px 50%;
-}
-
 .bracket-slot::before,
-.bracket-slot::after {
+.bracket-slot::after,
+.bracket-match-pair::before,
+.bracket-match-pair::after {
   content: "";
   position: absolute;
-  top: 50%;
-  width: 20px;
   height: 2px;
-  background: #4b5563;
-  transform: translateY(-50%);
   z-index: -1;
 }
 
 .bracket-slot::before {
-  right: -20px;
+  top: 50%;
+  right: -16px;
+  width: 16px;
+  border-bottom: 2px solid #4b5563;
 }
 
 .bracket-slot::after {
+  top: 50%;
   left: -20px;
+  width: 16px;
+  border-bottom: 2px solid #4b5563;
+}
+
+.bracket-match-pair::before {
+  top: 25%;
+  right: -16px;
+  bottom: 25%;
+  height: auto;
+  border-right: 2px solid #4b5563;
+}
+
+.bracket-match-pair::after {
+  top: 50%;
+  right: -32px;
+  width: 16px;
+  border-bottom: 2px solid #4b5563;
 }
 
 .bracket-slot:not(.bracket-slot--outgoing)::before {
@@ -42,5 +49,10 @@
 }
 
 .bracket-slot:not(.bracket-slot--incoming)::after {
+  display: none;
+}
+
+.bracket-match-pair:not(.bracket-match-pair--outgoing)::before,
+.bracket-match-pair:not(.bracket-match-pair--outgoing)::after {
   display: none;
 }
