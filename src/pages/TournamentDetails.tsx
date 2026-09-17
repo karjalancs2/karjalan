@@ -177,55 +177,70 @@ export default function TournamentDetails() {
       </section>
     );
   };
-  const groupedRounds = Array.from<any>(
-    matchList
-      .reduce((groups: Map<number, any>, match: any) => {
-        const parsedRound = Number(match?.round || match?.roundNumber);
-        const roundKey = Number.isFinite(parsedRound) ? parsedRound : 0;
-        const group = groups.get(roundKey);
-        if (group) {
-          group.matches.push(match);
-        } else {
-          groups.set(roundKey, { round: roundKey, matches: [match] });
-        }
-        return groups;
-      }, new Map<number, any>())
-      .values(),
-  )
-    .sort((a, b) => a.round - b.round)
-    .map((group) => {
-      const sortedMatches = [...group.matches].sort((a, b) => {
-        const matchNumber = (match: any) => {
-          const identifier =
-            match?.name ?? match?.identifier ?? match?.matchNumber;
-          const parsedNumber = parseInt(
-            String(identifier ?? "").replace(/[^0-9]/g, ""),
-            10,
-          );
-          if (Number.isFinite(parsedNumber)) return parsedNumber;
-          const position = Number(match?.bracketPosition);
-          return Number.isFinite(position) ? position : Number.MAX_SAFE_INTEGER;
-        };
-        return matchNumber(a) - matchNumber(b);
-      });
-      return { ...group, matches: sortedMatches };
-    });
-  const firstRoundMatchCount = groupedRounds[0]?.matches.length || 1;
-  const roundsWithSlots = groupedRounds.map(
-    (group: any, roundIndex: number) => {
-      const expectedSlotCount = Math.max(
-        group.matches.length,
-        Math.ceil(firstRoundMatchCount / 2 ** roundIndex),
-      );
-      return {
-        ...group,
-        slots: Array.from(
-          { length: expectedSlotCount },
-          (_, index) => group.matches[index] || null,
-        ),
-      };
-    },
-  );
+  const matchesByRound = matchList.reduce((rounds: Map<number, any[]>, match: any) => {
+    const parsedRound = Number(match?.round || match?.roundNumber);
+    const round = Number.isFinite(parsedRound) ? parsedRound : 0;
+    const matches = rounds.get(round) || [];
+    matches.push(match);
+    rounds.set(round, matches);
+    return rounds;
+  }, new Map<number, any[]>());
+  const roundNumbers = [...matchesByRound.keys()].sort((a, b) => a - b);
+  const highestRound = roundNumbers[roundNumbers.length - 1] ?? 0;
+  const getMatchSides = (match: any): string[] =>
+    [
+      match?.team1Id,
+      match?.team2Id,
+      match?.team1Name,
+      match?.team2Name,
+      match?.faction1?.teamId,
+      match?.faction2?.teamId,
+      match?.faction1?.name,
+      match?.faction2?.name,
+    ]
+      .filter(Boolean)
+      .map((value) => String(value).trim().toLowerCase());
+  const tracedRounds = new Map<number, any[]>();
+  let nextRoundMatches = [...(matchesByRound.get(highestRound) || [])];
+  tracedRounds.set(highestRound, nextRoundMatches);
+
+  for (let round = highestRound - 1; round >= 0; round -= 1) {
+    const availableMatches = [...(matchesByRound.get(round) || [])];
+    const usedMatches = new Set<any>();
+    const tracedMatches: any[] = [];
+    for (const nextMatch of nextRoundMatches) {
+      for (const side of getMatchSides(nextMatch).slice(0, 2)) {
+        const feeder = availableMatches.find(
+          (match) =>
+            !usedMatches.has(match) && getMatchSides(match).includes(side),
+        );
+        tracedMatches.push(feeder || null);
+        if (feeder) usedMatches.add(feeder);
+      }
+    }
+    const remainingMatches = availableMatches.filter(
+      (match) => !usedMatches.has(match),
+    );
+    tracedRounds.set(round, tracedMatches.concat(remainingMatches));
+    nextRoundMatches = tracedMatches;
+  }
+
+  const roundsWithSlots = roundNumbers.map((round) => {
+    const matches = tracedRounds.get(round) || [];
+    const roundIndex = roundNumbers.indexOf(round);
+    const expectedSlotCount = Math.max(
+      matches.length,
+      Math.ceil((tracedRounds.get(roundNumbers[0])?.length || 1) / 2 ** roundIndex),
+    );
+    return {
+      round,
+      matches,
+      slots: Array.from(
+        { length: expectedSlotCount },
+        (_, index) => matches[index] || null,
+      ),
+    };
+  });
   const normalizedStatus = String(
     tournament?.status ?? "upcoming",
   ).toLowerCase();
@@ -531,22 +546,29 @@ export default function TournamentDetails() {
                                         : ""
                                     }`}
                                   >
+                                    {roundIndex < roundsWithSlots.length - 1 && (
+                                      <div className="absolute top-1/2 -right-6 z-0 w-6 border-b-2 border-gray-600" />
+                                    )}
+                                    {roundIndex < roundsWithSlots.length - 1 &&
+                                      matchIndex % 2 === 0 && (
+                                        <div className="absolute top-1/2 -right-6 z-0 h-full border-r-2 border-gray-600" />
+                                      )}
+                                    {roundIndex > 0 && (
+                                      <div className="absolute top-1/2 -left-6 z-0 w-6 border-b-2 border-gray-600" />
+                                    )}
                                     <span className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
-                                      MATCH{" "}
-                                      {groupedRounds
+                                      MATCH {roundsWithSlots
                                         .slice(0, roundIndex)
                                         .reduce(
                                           (total, round) =>
                                             total + round.matches.length,
                                           0,
-                                        ) +
-                                        matchIndex +
-                                        1}
+                                        ) + matchIndex + 1}
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => setSelectedMatch(m)}
-                                      className="bracket-card w-full rounded border border-neutral-800 bg-[#121212] text-sm font-medium overflow-hidden"
+                                      className="bracket-card relative z-10 w-full rounded border border-neutral-800 bg-[#121212] text-sm font-medium overflow-hidden"
                                     >
                                       <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
                                         <span className="flex items-center gap-2">
