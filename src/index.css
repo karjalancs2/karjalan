@@ -8,9 +8,9 @@
 .bracket-slot::before {
   content: "";
   position: absolute;
-  left: calc(100% + 32px);
+  left: calc(100% + 24px);
   width: 2px;
-  background: #4b5563;
+  background: #66552b;
   z-index: 0;
 }
 
@@ -24,32 +24,23 @@
   height: 50%;
 }
 
+.bracket-slot::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 24px;
+  height: 2px;
+  background: #66552b;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
 .bracket-card {
   position: relative;
   z-index: 1;
 }
 
-.bracket-card::before,
-.bracket-card::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  height: 2px;
-  width: 32px;
-  background: #4b5563;
-  transform: translateY(-50%);
-  z-index: -1;
-}
-
-.bracket-card::before {
-  right: 100%;
-}
-
-.bracket-card::after {
-  left: 100%;
-}
-
-.bracket-slot--first .bracket-card::before,
-.bracket-slot--last .bracket-card::after {
+.bracket-slot--last::after {
   display: none;
 }

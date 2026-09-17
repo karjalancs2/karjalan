@@ -178,17 +178,19 @@ export default function TournamentDetails() {
     );
   };
   const groupedRounds = Array.from<any>(
-    matchList.reduce((groups: Map<number, any>, match: any) => {
-      const parsedRound = Number(match?.round || match?.roundNumber);
-      const roundKey = Number.isFinite(parsedRound) ? parsedRound : 0;
-      const group = groups.get(roundKey);
-      if (group) {
-        group.matches.push(match);
-      } else {
-        groups.set(roundKey, { round: roundKey, matches: [match] });
-      }
-      return groups;
-    }, new Map<number, any>()).values(),
+    matchList
+      .reduce((groups: Map<number, any>, match: any) => {
+        const parsedRound = Number(match?.round || match?.roundNumber);
+        const roundKey = Number.isFinite(parsedRound) ? parsedRound : 0;
+        const group = groups.get(roundKey);
+        if (group) {
+          group.matches.push(match);
+        } else {
+          groups.set(roundKey, { round: roundKey, matches: [match] });
+        }
+        return groups;
+      }, new Map<number, any>())
+      .values(),
   )
     .sort((a, b) => a.round - b.round)
     .map((group) => ({
@@ -205,6 +207,19 @@ export default function TournamentDetails() {
         );
       }),
     }));
+  const firstRoundMatchCount = groupedRounds[0]?.matches.length || 1;
+  const roundsWithSlots = groupedRounds.map((group: any, roundIndex: number) => {
+    const expectedSlotCount = Math.max(
+      group.matches.length,
+      Math.ceil(firstRoundMatchCount / 2 ** roundIndex),
+    );
+    return {
+      ...group,
+      slots: Array.from({ length: expectedSlotCount }, (_, index) =>
+        group.matches[index] || null,
+      ),
+    };
+  });
   const normalizedStatus = String(
     tournament?.status ?? "upcoming",
   ).toLowerCase();
@@ -431,16 +446,33 @@ export default function TournamentDetails() {
                 No bracket data available for this event yet.
               </div>
             ) : (
-              <div className="min-w-[800px] h-[640px] flex flex-row items-stretch gap-8 overflow-x-auto overflow-y-auto pb-4">
-                {groupedRounds.map((group: any, roundIndex: number) => (
+              <div className="min-w-[1000px] min-h-[1000px] flex flex-row items-stretch gap-8 overflow-x-auto overflow-y-auto pb-4">
+                {roundsWithSlots.map((group: any, roundIndex: number) => (
                   <div
                     key={group.round}
-                    className="flex h-full min-h-0 flex-col min-w-[220px]"
+                    className="flex h-full min-h-[1000px] min-w-[240px] flex-1 flex-col justify-around"
                   >
-                    <h3 className="text-xs font-bold text-neutral-500 uppercase mb-2 text-center">
-                      {group.round > 0 ? `Round ${group.round}` : "Unassigned"}
-                    </h3>
-                    {group.matches.map((m: any, matchIndex: number) => {
+                    <div className="mb-4 border-b border-neutral-800 pb-3 text-center">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-300">
+                        {group.matches.length === 4
+                          ? "Quarter-finals"
+                          : group.matches.length === 2
+                            ? "Semi-finals"
+                            : group.matches.length === 1
+                              ? "Grand finals"
+                              : group.round > 0
+                                ? `Round ${group.round}`
+                                : "Unassigned"}
+                      </h3>
+                      <p className="mt-1 text-[10px] uppercase tracking-wider text-neutral-600">
+                        {group.matches.length} matches - Best of 1
+                      </p>
+                    </div>
+                    <div className="flex min-h-0 flex-1 flex-col justify-around">
+                    {group.slots.map((m: any, matchIndex: number) => {
+                      if (!m) {
+                        return <div key={`empty-${group.round}-${matchIndex}`} className="bracket-slot h-16 opacity-0" aria-hidden="true" />;
+                      }
                       const t1 = getTeam(m?.team1Id) || {
                         name: safeString(m?.team1Name, "TBD") || "TBD",
                       };
@@ -465,10 +497,13 @@ export default function TournamentDetails() {
                               : ""
                           }`}
                         >
+                          <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
+                            MATCH {Number(m?.bracketPosition) || matchIndex + 1}
+                          </span>
                           <button
                             type="button"
                             onClick={() => setSelectedMatch(m)}
-                            className="bracket-card bg-neutral-900 border border-neutral-700 rounded w-64 text-sm font-medium overflow-hidden"
+                            className="bracket-card w-full rounded border border-neutral-800 bg-[#121212] text-sm font-medium overflow-hidden"
                           >
                             <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
                               <span className="flex items-center gap-2">
@@ -512,6 +547,7 @@ export default function TournamentDetails() {
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 ))}
               </div>
