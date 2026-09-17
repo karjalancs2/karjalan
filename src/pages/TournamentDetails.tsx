@@ -474,10 +474,13 @@ export default function TournamentDetails() {
             ) : (
               <div className="min-w-[1200px] w-max min-h-[1000px] flex flex-row items-stretch gap-8 overflow-x-auto overflow-y-auto pb-4">
                 {roundsWithSlots.map((group: any, roundIndex: number) => (
-                  <div
-                    key={group.round}
-                    className="flex h-full min-h-[1000px] min-w-[240px] flex-1 flex-col"
-                  >
+                  (() => {
+                    const slotHeight = Math.pow(2, roundIndex) * 90;
+                    return (
+                      <div
+                        key={group.round}
+                        className="flex h-full min-h-[1000px] min-w-[240px] flex-1 flex-col"
+                      >
                     <div className="mb-4 min-w-[220px] border-b border-neutral-800 pb-3 text-center">
                       <h3 className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-neutral-300">
                         {group.matches.length === 4
@@ -505,7 +508,7 @@ export default function TournamentDetails() {
                           return (
                             <div
                               key={`pair-${group.round}-${pairIndex}`}
-                              className="flex min-h-0 flex-1 flex-col"
+                              className="flex min-h-0 flex-1 flex-col justify-around"
                             >
                               {pair.map((m: any, pairMatchIndex: number) => {
                                 const matchIndex =
@@ -533,21 +536,25 @@ export default function TournamentDetails() {
                                 return (
                                   <div
                                     key={m?.id || `empty-${group.round}-${matchIndex}`}
-                                    className="relative flex flex-1 flex-col justify-center px-4"
+                                    style={{ height: `${slotHeight}px` }}
+                                    className="relative flex flex-col justify-center px-4"
                                   >
                                     {roundIndex > 0 && (
                                       <div className="absolute top-1/2 left-0 z-0 w-4 border-b-2 border-[#4b5563]" />
                                     )}
                                     {roundIndex < roundsWithSlots.length - 1 && (
-                                      <div className="absolute top-1/2 right-0 z-0 w-4 border-b-2 border-[#4b5563]" />
+                                      <div className="absolute top-1/2 -right-4 z-0 w-4 border-b-2 border-[#4b5563]" />
                                     )}
                                     {roundIndex < roundsWithSlots.length - 1 &&
                                       matchIndex % 2 === 0 && (
-                                        <div className="absolute top-1/2 right-0 z-0 h-1/2 w-0 border-r-2 border-[#4b5563]" />
-                                      )}
-                                    {roundIndex < roundsWithSlots.length - 1 &&
-                                      matchIndex % 2 !== 0 && (
-                                        <div className="absolute bottom-1/2 right-0 z-0 h-1/2 w-0 border-r-2 border-[#4b5563]" />
+                                        <div
+                                          className="absolute z-0 w-0 border-r-2 border-[#4b5563]"
+                                          style={{
+                                            top: "50%",
+                                            right: "-16px",
+                                            height: "100%",
+                                          }}
+                                        />
                                       )}
                                     {!m ? (
                                       <div
@@ -629,7 +636,9 @@ export default function TournamentDetails() {
                         },
                       )}
                     </div>
-                  </div>
+                      </div>
+                    );
+                  })()
                 ))}
               </div>
             )}
