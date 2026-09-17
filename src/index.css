@@ -7,7 +7,6 @@
 
 .bracket-slot::before,
 .bracket-slot::after,
-.bracket-match-pair::before,
 .bracket-match-pair::after {
   content: "";
   position: absolute;
@@ -22,18 +21,19 @@
   border-bottom: 2px solid #4b5563;
 }
 
-.bracket-slot::after {
+.bracket-slot--top::after {
   top: 50%;
-  left: -16px;
-  width: 16px;
-  border-bottom: 2px solid #4b5563;
+  right: -16px;
+  width: 2px;
+  height: 50%;
+  border-right: 2px solid #4b5563;
 }
 
-.bracket-match-pair::before {
-  top: 25%;
+.bracket-slot--bottom::after {
+  top: 0;
   right: -16px;
-  bottom: 25%;
-  height: auto;
+  width: 2px;
+  height: 50%;
   border-right: 2px solid #4b5563;
 }
 
@@ -48,11 +48,10 @@
   display: none;
 }
 
-.bracket-slot:not(.bracket-slot--incoming)::after {
+.bracket-slot:not(.bracket-slot--outgoing)::after {
   display: none;
 }
 
-.bracket-match-pair:not(.bracket-match-pair--outgoing)::before,
 .bracket-match-pair:not(.bracket-match-pair--outgoing)::after {
   display: none;
 }
