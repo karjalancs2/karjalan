@@ -24,7 +24,7 @@
 
 .bracket-slot::after {
   top: 50%;
-  left: -20px;
+  left: -16px;
   width: 16px;
   border-bottom: 2px solid #4b5563;
 }

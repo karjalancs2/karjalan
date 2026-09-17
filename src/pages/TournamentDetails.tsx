@@ -196,8 +196,10 @@ export default function TournamentDetails() {
     .map((group) => ({
       ...group,
       matches: [...group.matches].sort((a, b) => {
-        const positionA = Number(a?.bracketPosition);
-        const positionB = Number(b?.bracketPosition);
+        const positionA =
+          a?.bracketPosition == null ? Number.NaN : Number(a.bracketPosition);
+        const positionB =
+          b?.bracketPosition == null ? Number.NaN : Number(b.bracketPosition);
         const positionDifference =
           (Number.isFinite(positionA) ? positionA : Number.MAX_SAFE_INTEGER) -
           (Number.isFinite(positionB) ? positionB : Number.MAX_SAFE_INTEGER);
