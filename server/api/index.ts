@@ -1233,58 +1233,58 @@ apiRouter.get("/rankings/players", async (req, res) => {
   }
 });
 
-apiRouter.post(
-  "/admin/recalculate-elo",
-  authMiddleware,
-  async (req, res) => {
-    const userId = (req as any).user.id;
-    if (!(await isAdmin(userId))) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
+apiRouter.post("/admin/recalculate-elo", authMiddleware, async (req, res) => {
+  const userId = (req as any).user.id;
+  if (!(await isAdmin(userId))) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
 
-    try {
-      await prisma.team.updateMany({ data: { rankingPoints: 1000 } });
-      const matches = await prisma.match.findMany({
-        where: { status: "finished" },
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          team1Id: true,
-          team2Id: true,
-          team1Score: true,
-          team2Score: true,
-        },
-      });
+  try {
+    await prisma.team.updateMany({ data: { rankingPoints: 1000 } });
+    const matches = await prisma.match.findMany({
+      where: {
+        team1Id: { not: null },
+        team2Id: { not: null },
+        OR: [{ team1Score: { gt: 0 } }, { team2Score: { gt: 0 } }],
+      },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        team1Id: true,
+        team2Id: true,
+        team1Score: true,
+        team2Score: true,
+      },
+    });
 
-      let processed = 0;
-      for (const match of matches) {
-        if (
-          !match.team1Id ||
-          !match.team2Id ||
-          match.team1Score === match.team2Score
-        ) {
-          continue;
-        }
-
-        await rankingService.processMatchResult(
-          match.id,
-          match.team1Score,
-          match.team2Score,
-        );
-        processed += 1;
+    let processed = 0;
+    for (const match of matches) {
+      if (
+        !match.team1Id ||
+        !match.team2Id ||
+        match.team1Score === match.team2Score
+      ) {
+        continue;
       }
 
-      return res.json({
-        success: true,
-        matchesFound: matches.length,
-        matchesProcessed: processed,
-      });
-    } catch (error) {
-      console.error("Failed to recalculate team Elo:", error);
-      return res.status(500).json({ error: "Failed to recalculate team Elo" });
+      await rankingService.processMatchResult(
+        match.id,
+        match.team1Score,
+        match.team2Score,
+      );
+      processed += 1;
     }
-  },
-);
+
+    return res.json({
+      success: true,
+      matchesFound: matches.length,
+      matchesProcessed: processed,
+    });
+  } catch (error) {
+    console.error("Failed to recalculate team Elo:", error);
+    return res.status(500).json({ error: "Failed to recalculate team Elo" });
+  }
+});
 
 // CREATE team (Authenticated) — require a linked FACEIT profile first
 apiRouter.get("/teams/:id", async (req, res) => {
