@@ -1004,6 +1004,69 @@ export class FaceitService {
     };
   }
 
+  async syncMatchStatsToDatabase(matchId: string) {
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        team1: { include: { players: true } },
+        team2: { include: { players: true } },
+      },
+    });
+    if (!match?.faceitId) return 0;
+
+    const localPlayers = [
+      ...(match.team1?.players || []),
+      ...(match.team2?.players || []),
+    ];
+    const localPlayersByFaceitId = new Map(
+      localPlayers.map((player) => [player.faceitId, player]),
+    );
+    const stats = await this.getMatchStats(match.faceitId);
+    let saved = 0;
+
+    for (const statsTeam of stats?.rounds?.[0]?.teams || []) {
+      for (const player of statsTeam?.players || []) {
+        const faceitId = String(player?.player_id || player?.id || "");
+        const localPlayer = localPlayersByFaceitId.get(faceitId);
+        if (!localPlayer) continue;
+
+        const playerStats = player?.player_stats || {};
+        const statValue = (key: string) =>
+          Math.max(
+            0,
+            Math.trunc(
+              Number(
+                playerStats[key] ?? playerStats[key.toLowerCase()] ?? 0,
+              ) || 0,
+            ),
+          );
+        await prisma.playerMatchStat.upsert({
+          where: {
+            playerId_matchId: {
+              playerId: localPlayer.id,
+              matchId: match.id,
+            },
+          },
+          update: {
+            kills: statValue("Kills"),
+            deaths: statValue("Deaths"),
+            assists: statValue("Assists"),
+          },
+          create: {
+            playerId: localPlayer.id,
+            matchId: match.id,
+            kills: statValue("Kills"),
+            deaths: statValue("Deaths"),
+            assists: statValue("Assists"),
+          },
+        });
+        saved += 1;
+      }
+    }
+
+    return saved;
+  }
+
   /**
    * Processes incoming webhooks from FACEIT
    */
@@ -1040,6 +1103,7 @@ export class FaceitService {
           team1Score,
           team2Score,
         );
+        await this.syncMatchStatsToDatabase(match.id);
       } catch (err) {
         console.error("Failed to process match finish webhook:", err);
       }

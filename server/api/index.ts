@@ -1220,10 +1220,7 @@ apiRouter.get("/rankings/players", async (req, res) => {
   try {
     const matchStats = await prisma.playerMatchStat.findMany();
     const sampleStat = matchStats[0];
-    console.log(
-      "Sample match stat record:",
-      JSON.stringify(sampleStat),
-    );
+    console.log("Sample match stat record:", JSON.stringify(sampleStat));
     if (matchStats.length === 0) {
       return res.json(await fallbackRankings());
     }
@@ -1364,6 +1361,43 @@ apiRouter.post("/admin/recalculate-elo", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Failed to recalculate team Elo:", error);
     return res.status(500).json({ error: "Failed to recalculate team Elo" });
+  }
+});
+
+apiRouter.post("/admin/sync-stats", authMiddleware, async (req, res) => {
+  const userId = (req as any).user.id;
+  if (!(await isAdmin(userId))) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  try {
+    const matches = await prisma.match.findMany({
+      where: { status: "finished" },
+      select: { id: true },
+    });
+    let matchesProcessed = 0;
+    let statsSaved = 0;
+    const errors: string[] = [];
+
+    for (const match of matches) {
+      try {
+        statsSaved += await faceitService.syncMatchStatsToDatabase(match.id);
+        matchesProcessed += 1;
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    return res.json({
+      success: true,
+      matchesFound: matches.length,
+      matchesProcessed,
+      statsSaved,
+      errors,
+    });
+  } catch (error) {
+    console.error("Failed to sync player stats:", error);
+    return res.status(500).json({ error: "Failed to sync player stats" });
   }
 });
 
