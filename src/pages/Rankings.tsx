@@ -36,10 +36,12 @@ export default function Rankings() {
       </div>
 
       <div className="flex gap-6 mb-8 border-b border-neutral-800">
-        {([
-          ["teams", language === "fi" ? "Joukkueet" : "Teams"],
-          ["players", language === "fi" ? "Pelaajat" : "Players"],
-        ] as const).map(([tab, label]) => (
+        {(
+          [
+            ["teams", language === "fi" ? "Joukkueet" : "Teams"],
+            ["players", language === "fi" ? "Pelaajat" : "Players"],
+          ] as const
+        ).map(([tab, label]) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -88,6 +90,10 @@ export default function Rankings() {
                             src={team.logo}
                             alt=""
                             className="w-9 h-9 rounded object-cover border border-amber-500/30"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(team.name)}&background=222&color=fff`;
+                            }}
                           />
                         ) : (
                           <div className="w-9 h-9 bg-neutral-800 rounded flex items-center justify-center font-bold text-xs text-amber-400 border border-neutral-700">
@@ -117,6 +123,10 @@ export default function Rankings() {
                             src={player.avatar}
                             alt=""
                             className="w-9 h-9 rounded-full object-cover border border-amber-500/30"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.nickname)}&background=222&color=fff`;
+                            }}
                           />
                         ) : (
                           <div className="w-9 h-9 rounded-full bg-neutral-800 flex items-center justify-center font-bold text-amber-400 border border-neutral-700">

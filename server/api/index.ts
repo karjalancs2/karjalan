@@ -3,6 +3,7 @@ import { prisma } from "../database/prisma";
 import { authRouter, authMiddleware } from "../auth";
 import { faceitService } from "../integrations/faceit/faceitService";
 import { sanitizePlainText } from "../lib/sanitize";
+import { rankingService } from "../services/rankingService";
 
 export const apiRouter = Router();
 
@@ -1192,16 +1193,7 @@ apiRouter.get("/rankings/teams", async (req, res) => {
 apiRouter.get("/rankings/players", async (req, res) => {
   try {
     const players = await prisma.player.findMany({
-      include: {
-        playerStats: {
-          where: {
-            match: {
-              tournament: { status: "finished" },
-            },
-          },
-          select: { kills: true, deaths: true },
-        },
-      },
+      include: { playerStats: true },
     });
 
     const rankings = players
@@ -1221,11 +1213,17 @@ apiRouter.get("/rankings/players", async (req, res) => {
           avatar: player.avatar,
           kills,
           deaths,
-          kd: kills / deaths,
+          kd: deaths > 0 ? kills / deaths : 0,
+          fallbackScore: player.faceitElo ?? player.skillLevel ?? 0,
+          hasStats: kills > 0 && deaths > 0,
         };
       })
-      .filter((player) => player.kills > 0 && player.deaths > 0)
-      .sort((a, b) => b.kd - a.kd)
+      .sort(
+        (a, b) =>
+          Number(b.hasStats) - Number(a.hasStats) ||
+          b.kd - a.kd ||
+          b.fallbackScore - a.fallbackScore,
+      )
       .slice(0, 100);
 
     res.json(rankings);
@@ -1234,6 +1232,59 @@ apiRouter.get("/rankings/players", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch player rankings" });
   }
 });
+
+apiRouter.post(
+  "/admin/recalculate-elo",
+  authMiddleware,
+  async (req, res) => {
+    const userId = (req as any).user.id;
+    if (!(await isAdmin(userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    try {
+      await prisma.team.updateMany({ data: { rankingPoints: 1000 } });
+      const matches = await prisma.match.findMany({
+        where: { status: "finished" },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          team1Id: true,
+          team2Id: true,
+          team1Score: true,
+          team2Score: true,
+        },
+      });
+
+      let processed = 0;
+      for (const match of matches) {
+        if (
+          !match.team1Id ||
+          !match.team2Id ||
+          match.team1Score === match.team2Score
+        ) {
+          continue;
+        }
+
+        await rankingService.processMatchResult(
+          match.id,
+          match.team1Score,
+          match.team2Score,
+        );
+        processed += 1;
+      }
+
+      return res.json({
+        success: true,
+        matchesFound: matches.length,
+        matchesProcessed: processed,
+      });
+    } catch (error) {
+      console.error("Failed to recalculate team Elo:", error);
+      return res.status(500).json({ error: "Failed to recalculate team Elo" });
+    }
+  },
+);
 
 // CREATE team (Authenticated) — require a linked FACEIT profile first
 apiRouter.get("/teams/:id", async (req, res) => {

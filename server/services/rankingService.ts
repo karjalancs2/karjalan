@@ -13,6 +13,8 @@ export const rankingService = {
 
     if (!match || !match.team1Id || !match.team2Id) return;
 
+    if (team1Score === team2Score) return;
+
     // Determine winner and loser
     const team1Won = team1Score > team2Score;
     const winnerId = team1Won ? match.team1Id : match.team2Id;
