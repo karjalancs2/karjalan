@@ -247,8 +247,19 @@ export default function TournamentDetails() {
     };
   });
   const normalizedStatus = String(
-    tournament?.status ?? "upcoming",
+    tournament?.status ?? "unknown",
   ).toLowerCase();
+  const isRegistrationOpen = ["join", "registration"].includes(
+    normalizedStatus,
+  );
+  const tournamentStatusLabel =
+    normalizedStatus === "finished" || normalizedStatus === "cancelled"
+      ? "PÄÄTTYNYT"
+      : normalizedStatus === "started"
+        ? "KÄYNNISSÄ"
+        : isRegistrationOpen
+          ? "ILMOITTAUTUMINEN AUKI"
+          : "TILA TUNTEMATON";
   const formattedTournamentDate = tournament?.date
     ? (() => {
         const parsed = parseISO(tournament.date);
@@ -281,12 +292,9 @@ export default function TournamentDetails() {
                 <h1 className="text-3xl font-extrabold tracking-tight">
                   {tournament.name}
                 </h1>
-                {normalizedStatus === "live" && (
-                  <span className="text-[10px] font-bold bg-red-500/10 text-red-500 px-2 py-0.5 rounded uppercase flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>{" "}
-                    Live
-                  </span>
-                )}
+                <span className="text-[10px] font-bold bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded uppercase">
+                  {tournamentStatusLabel}
+                </span>
               </div>
               <div className="flex flex-wrap gap-4 text-sm font-medium text-neutral-400">
                 <span className="flex items-center gap-1.5">
@@ -305,15 +313,13 @@ export default function TournamentDetails() {
             </div>
           </div>
 
-          <div className="w-full md:w-auto">
-            <button className="w-full md:w-auto bg-white text-black font-bold px-8 py-3 rounded-sm hover:bg-neutral-200 transition-colors">
-              {normalizedStatus === "registration"
-                ? "ILMOITTAUDU"
-                : normalizedStatus === "live"
-                  ? "Turnaus on käynnissä"
-                  : "Katso tiedot"}
-            </button>
-          </div>
+          {isRegistrationOpen && (
+            <div className="w-full md:w-auto">
+              <button className="w-full md:w-auto bg-white text-black font-bold px-8 py-3 rounded-sm hover:bg-neutral-200 transition-colors">
+                ILMOITTAUDU
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -405,24 +411,26 @@ export default function TournamentDetails() {
                   </li>
                 </ul>
               </section>
-              <section className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
-                <h2 className="font-bold mb-4">
-                  {language === "fi" ? "FACEIT-joukkue" : "FACEIT team"}
-                </h2>
-                <p className="text-sm text-neutral-400 mb-4">
-                  {language === "fi"
-                    ? "Linkitä joukkueesi FACEIT URL, jotta tiimi voidaan yhdistää turnaukseen."
-                    : "Link your team’s FACEIT URL so it can be connected to the tournament."}
-                </p>
-                <a
-                  href={`/tournaments/${tournament.id}/link-faceit-team`}
-                  className="inline-flex items-center justify-center w-full bg-white text-black font-bold px-4 py-3 rounded-sm hover:bg-neutral-200 transition-colors"
-                >
-                  {language === "fi"
-                    ? "Linkitä FACEIT-joukkue"
-                    : "Link FACEIT team"}
-                </a>
-              </section>
+              {isRegistrationOpen && (
+                <section className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
+                  <h2 className="font-bold mb-4">
+                    {language === "fi" ? "FACEIT-joukkue" : "FACEIT team"}
+                  </h2>
+                  <p className="text-sm text-neutral-400 mb-4">
+                    {language === "fi"
+                      ? "Linkitä joukkueesi FACEIT URL, jotta tiimi voidaan yhdistää turnaukseen."
+                      : "Link your team’s FACEIT URL so it can be connected to the tournament."}
+                  </p>
+                  <a
+                    href={`/tournaments/${tournament.id}/link-faceit-team`}
+                    className="inline-flex items-center justify-center w-full bg-white text-black font-bold px-4 py-3 rounded-sm hover:bg-neutral-200 transition-colors"
+                  >
+                    {language === "fi"
+                      ? "Linkitä FACEIT-joukkue"
+                      : "Link FACEIT team"}
+                  </a>
+                </section>
+              )}
             </div>
           </div>
         )}
