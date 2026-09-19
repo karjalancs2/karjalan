@@ -601,7 +601,7 @@ export default function TournamentDetails() {
                                                 className="bracket-card relative z-10 h-auto w-full rounded border border-neutral-800 bg-[#121212] text-sm font-medium overflow-hidden"
                                               >
                                                 <div
-                                                  className={`flex justify-between items-center border-l-4 border-b border-neutral-800 px-4 py-1 ${team1Won ? "border-green-500" : "border-transparent"}`}
+                                                  className={`flex justify-between items-center border-l-4 border-b border-b-neutral-800 px-4 py-1 ${team1Won ? "border-green-500 bg-[#1a1a1a] text-white" : "border-transparent bg-[#121212] text-gray-400"}`}
                                                 >
                                                   <span className="flex items-center gap-2">
                                                     <TeamLogo
@@ -615,10 +615,9 @@ export default function TournamentDetails() {
                                                   </span>
                                                   <span
                                                     className={
-                                                      (m?.team1Score ?? 0) >
-                                                      (m?.team2Score ?? 0)
+                                                      team1Won
                                                         ? "text-white"
-                                                        : "text-neutral-500"
+                                                        : "text-gray-400"
                                                     }
                                                   >
                                                     {isBye
@@ -627,7 +626,7 @@ export default function TournamentDetails() {
                                                   </span>
                                                 </div>
                                                 <div
-                                                  className={`flex justify-between items-center border-l-4 bg-neutral-950 px-4 py-1 ${team2Won ? "border-green-500" : "border-transparent"}`}
+                                                  className={`flex justify-between items-center border-l-4 bg-[#121212] px-4 py-1 ${team2Won ? "border-green-500 bg-[#1a1a1a] text-white" : "border-transparent text-gray-400"}`}
                                                 >
                                                   <span className="flex items-center gap-2">
                                                     {!isBye && (
@@ -653,10 +652,9 @@ export default function TournamentDetails() {
                                                   </span>
                                                   <span
                                                     className={
-                                                      (m?.team2Score ?? 0) >
-                                                      (m?.team1Score ?? 0)
+                                                      team2Won
                                                         ? "text-white"
-                                                        : "text-neutral-500"
+                                                        : "text-gray-400"
                                                     }
                                                   >
                                                     {isBye
