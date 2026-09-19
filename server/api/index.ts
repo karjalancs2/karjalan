@@ -1192,50 +1192,80 @@ apiRouter.get("/rankings/teams", async (req, res) => {
 
 apiRouter.get("/rankings/players", async (req, res) => {
   try {
-    const players = await prisma.player.findMany({
-      include: { playerStats: true },
+    const matchStats = await prisma.playerMatchStat.findMany({
+      select: {
+        playerId: true,
+        kills: true,
+        deaths: true,
+      },
     });
+    const playerIdentifiers = [
+      ...new Set(matchStats.map((stat) => stat.playerId)),
+    ];
+    const players = playerIdentifiers.length
+      ? await prisma.player.findMany({
+          where: {
+            OR: [
+              { id: { in: playerIdentifiers } },
+              { faceitId: { in: playerIdentifiers } },
+            ],
+          },
+          select: {
+            id: true,
+            faceitId: true,
+            nickname: true,
+            avatar: true,
+            team: {
+              select: { id: true, name: true, logo: true },
+            },
+          },
+        })
+      : [];
+    const playersByIdentifier = new Map<string, (typeof players)[number]>();
+    for (const player of players) {
+      playersByIdentifier.set(player.id, player);
+      playersByIdentifier.set(player.faceitId, player);
+    }
+    const totalsByPlayer = new Map<
+      string,
+      { totalKills: number; totalDeaths: number }
+    >();
 
-    const rankings = players
-      .map((player) => {
-        const stats =
-          (player as any)?.matchStats ||
-          (player as any)?.stats ||
-          player?.playerStats ||
-          [];
-        const totalKills = stats.reduce(
-          (total, stat) =>
-            total + (Number.parseInt(String(stat.kills ?? 0), 10) || 0),
-          0,
-        );
-        const totalDeaths = stats.reduce(
-          (total, stat) =>
-            total + (Number.parseInt(String(stat.deaths ?? 0), 10) || 0),
-          0,
-        );
+    for (const stat of matchStats) {
+      const totals = totalsByPlayer.get(stat.playerId) || {
+        totalKills: 0,
+        totalDeaths: 0,
+      };
+      totals.totalKills += parseInt(String(stat.kills || 0), 10) || 0;
+      totals.totalDeaths += parseInt(String(stat.deaths || 0), 10) || 0;
+      totalsByPlayer.set(stat.playerId, totals);
+    }
+
+    const rankings = [...totalsByPlayer.entries()]
+      .flatMap(([playerIdentifier, totals]) => {
+        const player = playersByIdentifier.get(playerIdentifier);
+        if (!player) return [];
+
         const kdRatio =
-          totalKills > 0 || totalDeaths > 0
-            ? totalDeaths > 0
-              ? totalKills / totalDeaths
-              : totalKills
-            : 0;
-
-        return {
-          id: player.id,
-          nickname: player.nickname,
-          avatar: player.avatar,
-          kills: totalKills,
-          deaths: totalDeaths,
-          kdRatio,
-          fallbackScore: player.faceitElo ?? player.skillLevel ?? 0,
-        };
+          totals.totalDeaths > 0
+            ? totals.totalKills / totals.totalDeaths
+            : totals.totalKills;
+        return [
+          {
+            id: player.id,
+            nickname: player.nickname,
+            avatar: player.avatar,
+            team: player.team,
+            kills: totals.totalKills,
+            deaths: totals.totalDeaths,
+            kdRatio,
+          },
+        ];
       })
-      .sort(
-        (a, b) => b.kdRatio - a.kdRatio || b.fallbackScore - a.fallbackScore,
-      )
+      .sort((a, b) => b.kdRatio - a.kdRatio)
       .slice(0, 50);
 
-    console.log("Player stats check:", players[0]);
+    console.log("Player stats check:", matchStats[0]);
     res.json(rankings);
   } catch (error) {
     console.error("Failed to fetch player rankings:", error);
