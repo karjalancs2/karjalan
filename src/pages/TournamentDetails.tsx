@@ -555,7 +555,7 @@ export default function TournamentDetails() {
                                           className="relative flex flex-col justify-center px-4"
                                         >
                                           {roundIndex > 0 && (
-                                            <div className="absolute top-1/2 -translate-y-1/2 left-0 z-0 w-4 border-b-2 border-amber-600" />
+                                            <div className="absolute top-1/2 -translate-y-1/2 -left-4 z-0 w-4 border-b-2 border-amber-600" />
                                           )}
                                           {roundIndex <
                                             roundsWithSlots.length - 1 && (
