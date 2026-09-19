@@ -139,7 +139,7 @@ export default function Rankings() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-lg text-amber-400">
-                      {player.kd.toFixed(2)}
+                      {player.kdRatio.toFixed(2)}
                     </td>
                   </tr>
                 ))}

@@ -1182,7 +1182,7 @@ apiRouter.get("/rankings/teams", async (req, res) => {
         },
       },
       orderBy: { rankingPoints: "desc" },
-      take: 100,
+      take: 50,
     });
     res.json(teams);
   } catch (error) {
@@ -1198,33 +1198,40 @@ apiRouter.get("/rankings/players", async (req, res) => {
 
     const rankings = players
       .map((player) => {
-        const kills = player.playerStats.reduce(
-          (total, stat) => total + stat.kills,
+        const totalKills = player.playerStats.reduce(
+          (total, stat) =>
+            total + (Number.parseInt(String(stat.kills ?? 0), 10) || 0),
           0,
         );
-        const deaths = player.playerStats.reduce(
-          (total, stat) => total + stat.deaths,
+        const totalDeaths = player.playerStats.reduce(
+          (total, stat) =>
+            total + (Number.parseInt(String(stat.deaths ?? 0), 10) || 0),
           0,
         );
+        const kdRatio =
+          totalKills > 0 || totalDeaths > 0
+            ? totalDeaths > 0
+              ? totalKills / totalDeaths
+              : totalKills
+            : 0;
 
         return {
           id: player.id,
           nickname: player.nickname,
           avatar: player.avatar,
-          kills,
-          deaths,
-          kd: deaths > 0 ? kills / deaths : 0,
+          kills: totalKills,
+          deaths: totalDeaths,
+          kdRatio,
           fallbackScore: player.faceitElo ?? player.skillLevel ?? 0,
-          hasStats: kills > 0 && deaths > 0,
         };
       })
+      .filter((player) => player.kills > 0 || player.deaths > 0)
       .sort(
         (a, b) =>
-          Number(b.hasStats) - Number(a.hasStats) ||
-          b.kd - a.kd ||
+          b.kdRatio - a.kdRatio ||
           b.fallbackScore - a.fallbackScore,
       )
-      .slice(0, 100);
+      .slice(0, 50);
 
     res.json(rankings);
   } catch (error) {

@@ -42,7 +42,7 @@ export interface PlayerRanking {
   avatar?: string;
   kills: number;
   deaths: number;
-  kd: number;
+  kdRatio: number;
 }
 
 export interface Tournament {
