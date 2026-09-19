@@ -104,7 +104,8 @@ export default function Home() {
   const activeMatch = liveMatchList[0];
   const activeMatchTournamentId =
     activeMatch?.tournamentId || featuredTournament?.id;
-  const tournamentStatus = featuredTournament?.status?.toLowerCase() ?? "unknown";
+  const tournamentStatus =
+    featuredTournament?.status?.toLowerCase() ?? "unknown";
   const tournamentEndedByDate =
     Boolean(featuredTournament?.endDate) &&
     new Date(featuredTournament.endDate as string).getTime() < Date.now();
@@ -298,7 +299,7 @@ export default function Home() {
                 </div>
 
                 <div className="mt-4 flex items-center gap-4">
-                  <span className="text-xs font-bold bg-green-500/10 text-green-400 px-3 py-1 rounded">
+                  <span className="text-xs font-bold bg-amber-500/10 text-amber-400 px-3 py-1 rounded">
                     {tournamentStatusLabel}
                   </span>
                 </div>
