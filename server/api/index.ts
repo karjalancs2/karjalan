@@ -1175,12 +1175,63 @@ apiRouter.post(
 apiRouter.get("/rankings/teams", async (req, res) => {
   try {
     const teams = await prisma.team.findMany({
+      where: {
+        tournaments: {
+          some: { status: "finished" },
+        },
+      },
       orderBy: { rankingPoints: "desc" },
       take: 100,
     });
     res.json(teams);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch rankings" });
+  }
+});
+
+apiRouter.get("/rankings/players", async (req, res) => {
+  try {
+    const players = await prisma.player.findMany({
+      include: {
+        playerStats: {
+          where: {
+            match: {
+              tournament: { status: "finished" },
+            },
+          },
+          select: { kills: true, deaths: true },
+        },
+      },
+    });
+
+    const rankings = players
+      .map((player) => {
+        const kills = player.playerStats.reduce(
+          (total, stat) => total + stat.kills,
+          0,
+        );
+        const deaths = player.playerStats.reduce(
+          (total, stat) => total + stat.deaths,
+          0,
+        );
+
+        return {
+          id: player.id,
+          nickname: player.nickname,
+          avatar: player.avatar,
+          kills,
+          deaths,
+          kd: kills / deaths,
+        };
+      })
+      .filter((player) => player.kills > 0 && player.deaths > 0)
+      .sort((a, b) => b.kd - a.kd)
+      .slice(0, 100);
+
+    res.json(rankings);
+  } catch (error) {
+    console.error("Failed to fetch player rankings:", error);
+    res.status(500).json({ error: "Failed to fetch player rankings" });
   }
 });
 

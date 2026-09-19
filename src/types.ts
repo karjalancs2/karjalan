@@ -36,6 +36,15 @@ export interface Player {
   faceitElo?: number;
 }
 
+export interface PlayerRanking {
+  id: string;
+  nickname: string;
+  avatar?: string;
+  kills: number;
+  deaths: number;
+  kd: number;
+}
+
 export interface Tournament {
   id: string;
   name: string;

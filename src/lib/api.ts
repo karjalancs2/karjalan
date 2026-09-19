@@ -171,6 +171,26 @@ export const api = {
       return [];
     }
   },
+  getRankingTeams: async () => {
+    try {
+      const res = await apiFetch("/api/rankings/teams");
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  },
+  getRankingPlayers: async () => {
+    try {
+      const res = await apiFetch("/api/rankings/players");
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  },
   syncMatchWithFaceit: async (matchId: string) => {
     // Calls our backend Express server that abstracts the FACEIT API
     try {
