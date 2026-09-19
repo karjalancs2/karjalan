@@ -493,8 +493,8 @@ export class FaceitService {
               : null;
           const prizePool = Number(details?.prize_pool);
           const teamCapacity = Number(
-            details?.max_participants ??
-              details?.max_teams ??
+            details?.max_teams ??
+              details?.max_participants ??
               (rawSubscriptions.length > 0 ? rawSubscriptions.length : 64),
           );
           const data = {
