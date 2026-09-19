@@ -473,7 +473,7 @@ export default function TournamentDetails() {
               </div>
             ) : (
               <div className="min-w-[1200px] w-max min-h-[1000px] flex flex-row items-stretch gap-8 overflow-x-auto overflow-y-auto pb-4">
-                {roundsWithSlots.map((group: any, roundIndex: number) => (
+                {roundsWithSlots.map((group: any, roundIndex: number) =>
                   (() => {
                     const slotHeight = Math.pow(2, roundIndex) * 90;
                     return (
@@ -481,165 +481,205 @@ export default function TournamentDetails() {
                         key={group.round}
                         className="flex h-full min-h-[1000px] min-w-[240px] flex-1 flex-col"
                       >
-                    <div className="mb-4 min-w-[220px] border-b border-neutral-800 pb-3 text-center">
-                      <h3 className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-neutral-300">
-                        {group.matches.length === 4
-                          ? "Quarter-finals"
-                          : group.matches.length === 2
-                            ? "Semi-finals"
-                            : group.matches.length === 1
-                              ? "Grand finals"
-                              : group.round > 0
-                                ? `Round ${group.round}`
-                                : "Unassigned"}
-                      </h3>
-                      <p className="mt-1 text-[10px] uppercase tracking-wider text-neutral-600">
-                        {group.matches.length} matches - Best of 1
-                      </p>
-                    </div>
-                    <div className="flex min-h-0 flex-1 flex-col">
-                      {Array.from(
-                        { length: Math.ceil(group.slots.length / 2) },
-                        (_, pairIndex) => {
-                          const pair = group.slots.slice(
-                            pairIndex * 2,
-                            pairIndex * 2 + 2,
-                          );
-                          return (
-                            <div
-                              key={`pair-${group.round}-${pairIndex}`}
-                              className="flex min-h-0 flex-1 flex-col justify-around"
-                            >
-                              {pair.map((m: any, pairMatchIndex: number) => {
-                                const matchIndex =
-                                  pairIndex * 2 + pairMatchIndex;
-                                const t1 = m
-                                  ? getTeam(m?.team1Id) || {
-                                      name:
-                                        safeString(m?.team1Name, "TBD") ||
-                                        "TBD",
-                                    }
-                                  : null;
-                                const isBye =
-                                  !m?.team2Id ||
-                                  String(m?.team2Name || "").toLowerCase() ===
-                                    "bye";
-                                const t2 = !m
-                                  ? null
-                                  : isBye
-                                    ? null
-                                    : getTeam(m?.team2Id) || {
-                                        name:
-                                          safeString(m?.team2Name, "TBD") ||
-                                          "TBD",
-                                      };
-                                return (
-                                  <div
-                                    key={m?.id || `empty-${group.round}-${matchIndex}`}
-                                    style={{ height: `${slotHeight}px` }}
-                                    className="relative flex flex-col justify-center px-4"
-                                  >
-                                    {roundIndex > 0 && (
-                                      <div className="absolute top-1/2 left-0 z-0 w-4 border-b-2 border-[#4b5563]" />
-                                    )}
-                                    {roundIndex < roundsWithSlots.length - 1 && (
-                                      <div className="absolute top-1/2 -right-4 z-0 w-4 border-b-2 border-[#4b5563]" />
-                                    )}
-                                    {roundIndex < roundsWithSlots.length - 1 &&
-                                      matchIndex % 2 === 0 && (
+                        <div className="mb-4 min-w-[220px] border-b border-neutral-800 pb-3 text-center">
+                          <h3 className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-neutral-300">
+                            {group.matches.length === 4
+                              ? "Quarter-finals"
+                              : group.matches.length === 2
+                                ? "Semi-finals"
+                                : group.matches.length === 1
+                                  ? "Grand finals"
+                                  : group.round > 0
+                                    ? `Round ${group.round}`
+                                    : "Unassigned"}
+                          </h3>
+                          <p className="mt-1 text-[10px] uppercase tracking-wider text-neutral-600">
+                            {group.matches.length} matches - Best of 1
+                          </p>
+                        </div>
+                        <div className="flex min-h-0 flex-1 flex-col">
+                          {Array.from(
+                            { length: Math.ceil(group.slots.length / 2) },
+                            (_, pairIndex) => {
+                              const pair = group.slots.slice(
+                                pairIndex * 2,
+                                pairIndex * 2 + 2,
+                              );
+                              return (
+                                <div
+                                  key={`pair-${group.round}-${pairIndex}`}
+                                  className="flex min-h-0 flex-1 flex-col justify-around"
+                                >
+                                  {pair.map(
+                                    (m: any, pairMatchIndex: number) => {
+                                      const matchIndex =
+                                        pairIndex * 2 + pairMatchIndex;
+                                      const t1 = m
+                                        ? getTeam(m?.team1Id) || {
+                                            name:
+                                              safeString(m?.team1Name, "TBD") ||
+                                              "TBD",
+                                          }
+                                        : null;
+                                      const isBye =
+                                        !m?.team2Id ||
+                                        String(
+                                          m?.team2Name || "",
+                                        ).toLowerCase() === "bye";
+                                      const t2 = !m
+                                        ? null
+                                        : isBye
+                                          ? null
+                                          : getTeam(m?.team2Id) || {
+                                              name:
+                                                safeString(
+                                                  m?.team2Name,
+                                                  "TBD",
+                                                ) || "TBD",
+                                            };
+                                      const team1Won =
+                                        isBye ||
+                                        (m?.team1Score ?? 0) >
+                                          (m?.team2Score ?? 0);
+                                      const team2Won =
+                                        !isBye &&
+                                        (m?.team2Score ?? 0) >
+                                          (m?.team1Score ?? 0);
+                                      return (
                                         <div
-                                          className="absolute z-0 w-0 border-r-2 border-[#4b5563]"
-                                          style={{
-                                            top: "50%",
-                                            right: "-16px",
-                                            height: "100%",
-                                          }}
-                                        />
-                                      )}
-                                    {!m ? (
-                                      <div
-                                        className="h-16 opacity-0"
-                                        aria-hidden="true"
-                                      />
-                                    ) : (
-                                      <>
-                                        <span className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
-                                          MATCH {roundsWithSlots
-                                            .slice(0, roundIndex)
-                                            .reduce(
-                                              (total, round) =>
-                                                total + round.matches.length,
-                                              0,
-                                            ) +
-                                            matchIndex +
-                                            1}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() => setSelectedMatch(m)}
-                                          className="bracket-card relative z-10 w-full rounded border border-neutral-800 bg-[#121212] text-sm font-medium overflow-hidden"
-                                        >
-                                      <div className="flex justify-between items-center px-4 py-2 border-b border-neutral-800">
-                                        <span className="flex items-center gap-2">
-                                          <TeamLogo team={t1} size="w-5 h-5" />
-                                          {safeString(t1?.name, "TBD") || "TBD"}
-                                        </span>
-                                        <span
-                                          className={
-                                            (m?.team1Score ?? 0) >
-                                            (m?.team2Score ?? 0)
-                                              ? "text-white"
-                                              : "text-neutral-500"
+                                          key={
+                                            m?.id ||
+                                            `empty-${group.round}-${matchIndex}`
                                           }
+                                          style={{ height: `${slotHeight}px` }}
+                                          className="relative flex flex-col justify-center px-4"
                                         >
-                                          {isBye ? "W" : (m?.team1Score ?? 0)}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center px-4 py-2 bg-neutral-950">
-                                        <span className="flex items-center gap-2">
-                                          {!isBye && (
-                                            <TeamLogo
-                                              team={t2}
-                                              size="w-5 h-5"
-                                            />
+                                          {roundIndex > 0 && (
+                                            <div className="absolute top-1/2 -translate-y-1/2 left-0 z-0 w-4 border-b-2 border-amber-600" />
                                           )}
-                                          <span
-                                            className={
-                                              isBye ? "text-neutral-500" : ""
-                                            }
-                                          >
-                                            {isBye
-                                              ? "BYE"
-                                              : safeString(t2?.name, "TBD") ||
-                                                "TBD"}
-                                          </span>
-                                        </span>
-                                        <span
-                                          className={
-                                            (m?.team2Score ?? 0) >
-                                            (m?.team1Score ?? 0)
-                                              ? "text-white"
-                                              : "text-neutral-500"
-                                          }
-                                        >
-                                          {isBye ? "-" : (m?.team2Score ?? 0)}
-                                        </span>
-                                      </div>
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        },
-                      )}
-                    </div>
+                                          {roundIndex <
+                                            roundsWithSlots.length - 1 && (
+                                            <div className="absolute top-1/2 -translate-y-1/2 -right-4 z-0 w-4 border-b-2 border-amber-600" />
+                                          )}
+                                          {roundIndex <
+                                            roundsWithSlots.length - 1 &&
+                                            matchIndex % 2 === 0 && (
+                                              <div
+                                                className="absolute z-0 w-0 border-r-2 border-amber-600"
+                                                style={{
+                                                  top: "50%",
+                                                  right: "-16px",
+                                                  height: "100%",
+                                                }}
+                                              />
+                                            )}
+                                          {!m ? (
+                                            <div
+                                              className="h-16 opacity-0"
+                                              aria-hidden="true"
+                                            />
+                                          ) : (
+                                            <>
+                                              <span className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
+                                                MATCH{" "}
+                                                {roundsWithSlots
+                                                  .slice(0, roundIndex)
+                                                  .reduce(
+                                                    (total, round) =>
+                                                      total +
+                                                      round.matches.length,
+                                                    0,
+                                                  ) +
+                                                  matchIndex +
+                                                  1}
+                                              </span>
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setSelectedMatch(m)
+                                                }
+                                                className="bracket-card relative z-10 h-auto w-full rounded border border-neutral-800 bg-[#121212] text-sm font-medium overflow-hidden"
+                                              >
+                                                <div
+                                                  className={`flex justify-between items-center border-l-4 border-b border-neutral-800 px-4 py-1 ${team1Won ? "border-green-500" : "border-transparent"}`}
+                                                >
+                                                  <span className="flex items-center gap-2">
+                                                    <TeamLogo
+                                                      team={t1}
+                                                      size="w-5 h-5"
+                                                    />
+                                                    {safeString(
+                                                      t1?.name,
+                                                      "TBD",
+                                                    ) || "TBD"}
+                                                  </span>
+                                                  <span
+                                                    className={
+                                                      (m?.team1Score ?? 0) >
+                                                      (m?.team2Score ?? 0)
+                                                        ? "text-white"
+                                                        : "text-neutral-500"
+                                                    }
+                                                  >
+                                                    {isBye
+                                                      ? "W"
+                                                      : (m?.team1Score ?? 0)}
+                                                  </span>
+                                                </div>
+                                                <div
+                                                  className={`flex justify-between items-center border-l-4 bg-neutral-950 px-4 py-1 ${team2Won ? "border-green-500" : "border-transparent"}`}
+                                                >
+                                                  <span className="flex items-center gap-2">
+                                                    {!isBye && (
+                                                      <TeamLogo
+                                                        team={t2}
+                                                        size="w-5 h-5"
+                                                      />
+                                                    )}
+                                                    <span
+                                                      className={
+                                                        isBye
+                                                          ? "text-neutral-500"
+                                                          : ""
+                                                      }
+                                                    >
+                                                      {isBye
+                                                        ? "BYE"
+                                                        : safeString(
+                                                            t2?.name,
+                                                            "TBD",
+                                                          ) || "TBD"}
+                                                    </span>
+                                                  </span>
+                                                  <span
+                                                    className={
+                                                      (m?.team2Score ?? 0) >
+                                                      (m?.team1Score ?? 0)
+                                                        ? "text-white"
+                                                        : "text-neutral-500"
+                                                    }
+                                                  >
+                                                    {isBye
+                                                      ? "-"
+                                                      : (m?.team2Score ?? 0)}
+                                                  </span>
+                                                </div>
+                                              </button>
+                                            </>
+                                          )}
+                                        </div>
+                                      );
+                                    },
+                                  )}
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
                       </div>
                     );
-                  })()
-                ))}
+                  })(),
+                )}
               </div>
             )}
           </div>
