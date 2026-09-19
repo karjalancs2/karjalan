@@ -123,8 +123,9 @@ model JoinRequest {
 model Tournament {
   id            String    @id @default(uuid())
   name          String
-  status        String    @default("upcoming")
+  status        String    @default("unknown")
   date          DateTime?
+  endDate       DateTime?
   prizePool     Int       @default(0)
   teamCapacity  Int       @default(64)
   entryFee      Int       @default(0)

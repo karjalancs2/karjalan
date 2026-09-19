@@ -104,6 +104,23 @@ export default function Home() {
   const activeMatch = liveMatchList[0];
   const activeMatchTournamentId =
     activeMatch?.tournamentId || featuredTournament?.id;
+  const tournamentStatus = featuredTournament?.status?.toLowerCase() ?? "unknown";
+  const tournamentEndedByDate =
+    Boolean(featuredTournament?.endDate) &&
+    new Date(featuredTournament.endDate as string).getTime() < Date.now();
+  const isRegistrationOpen = ["join", "registration"].includes(
+    tournamentStatus,
+  );
+  const tournamentStatusLabel =
+    tournamentStatus === "finished" ||
+    tournamentStatus === "cancelled" ||
+    tournamentEndedByDate
+      ? "PÄÄTTYNYT"
+      : tournamentStatus === "started"
+        ? "KÄYNNISSÄ"
+        : isRegistrationOpen
+          ? "ILMOITTAUTUMINEN AUKI"
+          : "TILA TUNTEMATON";
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -282,18 +299,20 @@ export default function Home() {
 
                 <div className="mt-4 flex items-center gap-4">
                   <span className="text-xs font-bold bg-green-500/10 text-green-400 px-3 py-1 rounded">
-                    {t("status.registration_open")}
+                    {tournamentStatusLabel}
                   </span>
                 </div>
 
-                <div className="mt-4">
-                  <Link
-                    to={`/tournaments/${featuredTournament.id}`}
-                    className="bg-white text-black px-8 py-3 rounded-sm font-bold hover:bg-neutral-200 transition-colors inline-block"
-                  >
-                    {t("btn.register")}
-                  </Link>
-                </div>
+                {isRegistrationOpen && (
+                  <div className="mt-4">
+                    <Link
+                      to={`/tournaments/${featuredTournament.id}`}
+                      className="bg-white text-black px-8 py-3 rounded-sm font-bold hover:bg-neutral-200 transition-colors inline-block"
+                    >
+                      {t("btn.register")}
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </section>

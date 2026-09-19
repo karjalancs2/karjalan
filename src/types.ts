@@ -40,8 +40,9 @@ export interface Tournament {
   id: string;
   name: string;
   logo?: string;
-  status: "upcoming" | "registration" | "live" | "completed";
+  status: string;
   date: string;
+  endDate?: string;
   prizePool: number;
   teamCapacity: number;
   registeredTeamsCount: number;

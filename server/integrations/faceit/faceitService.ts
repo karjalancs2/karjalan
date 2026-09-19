@@ -469,12 +469,26 @@ export class FaceitService {
               : details?.start_date != null
                 ? Number(details.start_date)
                 : null;
+          const rawEndDate =
+            details?.championship_end != null
+              ? Number(details.championship_end)
+              : details?.end_date != null
+                ? Number(details.end_date)
+                : null;
           const parsedDate =
             rawStartDate != null
               ? new Date(
                   rawStartDate > 1_000_000_000_000
                     ? rawStartDate
                     : rawStartDate * 1000,
+                )
+              : null;
+          const parsedEndDate =
+            rawEndDate != null
+              ? new Date(
+                  rawEndDate > 1_000_000_000_000
+                    ? rawEndDate
+                    : rawEndDate * 1000,
                 )
               : null;
           const prizePool = Number(details?.prize_pool);
@@ -490,11 +504,15 @@ export class FaceitService {
                 : `FACEIT Tournament ${faceitId}`,
             status:
               typeof details?.status === "string" && details.status.trim()
-                ? details.status
-                : "upcoming",
+                ? details.status.trim().toLowerCase()
+                : "unknown",
             date:
               parsedDate && !Number.isNaN(parsedDate.getTime())
                 ? parsedDate
+                : null,
+            endDate:
+              parsedEndDate && !Number.isNaN(parsedEndDate.getTime())
+                ? parsedEndDate
                 : null,
             prizePool: Number.isFinite(prizePool)
               ? Math.max(0, Math.trunc(prizePool))
