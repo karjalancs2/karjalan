@@ -32,15 +32,15 @@ export const api = {
       throw apiError(data.error || "Failed to import tournament", res.status);
     return data;
   },
-  clearActiveTournament: async () => {
-    const res = await apiFetch("/api/admin/tournaments/active", {
+  deleteTournament: async (id: string) => {
+    const res = await apiFetch(`/api/admin/tournaments/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok)
       throw apiError(
-        data.error || "Failed to clear active tournament",
+        data.error || "Failed to delete tournament",
         res.status,
       );
     return data;

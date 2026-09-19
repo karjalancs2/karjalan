@@ -374,6 +374,11 @@ export default function Home() {
                           src={player.avatar}
                           alt=""
                           className="h-14 w-14 rounded-full object-cover border border-amber-500/30"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src =
+                              "https://ui-avatars.com/api/?name=Player&background=222&color=fff";
+                          }}
                         />
                       ) : (
                         <span className="flex h-14 w-14 items-center justify-center rounded-full border border-amber-500/30 bg-black text-lg font-black text-amber-400">

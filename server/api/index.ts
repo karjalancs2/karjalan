@@ -418,7 +418,7 @@ apiRouter.post(
 );
 
 apiRouter.delete(
-  "/admin/tournaments/active",
+  "/admin/tournaments/:id",
   authMiddleware,
   async (req, res) => {
     const userId = (req as any).user.id;
@@ -427,18 +427,14 @@ apiRouter.delete(
     }
 
     try {
-      const result = await prisma.tournament.deleteMany({});
-
-      return res.json({
-        success: true,
-        cleared: result.count > 0,
-        deleted: result.count,
-      });
-    } catch (error) {
-      console.error("Failed to clear active tournament:", error);
-      return res
-        .status(500)
-        .json({ error: "Failed to clear active tournament" });
+      await prisma.tournament.delete({ where: { id: req.params.id } });
+      return res.json({ success: true, deleted: req.params.id });
+    } catch (error: any) {
+      if (error?.code === "P2025") {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      console.error("Failed to delete tournament:", error);
+      return res.status(500).json({ error: "Failed to delete tournament" });
     }
   },
 );
