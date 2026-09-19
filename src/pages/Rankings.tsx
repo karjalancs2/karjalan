@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../lib/api";
+import { apiFetch } from "../lib/http";
 import { PlayerRanking, Team } from "../types";
 
 export default function Rankings() {
@@ -21,6 +22,28 @@ export default function Rankings() {
 
     loadRankings();
   }, []);
+
+  const handleRecalculateElo = async () => {
+    try {
+      const response = await apiFetch("/api/admin/recalculate-elo", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "Elo recalculation failed");
+      }
+
+      alert(
+        `Elo recalculation complete. ${data.matchesProcessed ?? 0} matches processed.`,
+      );
+    } catch (error) {
+      alert(
+        error instanceof Error ? error.message : "Elo recalculation failed",
+      );
+    }
+  };
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -153,6 +176,15 @@ export default function Rankings() {
               : "No rankings from finished tournaments yet."}
           </div>
         )}
+      </div>
+      <div className="mt-8 flex justify-end">
+        <button
+          type="button"
+          onClick={handleRecalculateElo}
+          className="text-xs text-gray-800 bg-transparent hover:text-gray-500"
+        >
+          Recalculate Elo
+        </button>
       </div>
     </div>
   );
