@@ -1198,12 +1198,17 @@ apiRouter.get("/rankings/players", async (req, res) => {
 
     const rankings = players
       .map((player) => {
-        const totalKills = player.playerStats.reduce(
+        const stats =
+          (player as any)?.matchStats ||
+          (player as any)?.stats ||
+          player?.playerStats ||
+          [];
+        const totalKills = stats.reduce(
           (total, stat) =>
             total + (Number.parseInt(String(stat.kills ?? 0), 10) || 0),
           0,
         );
-        const totalDeaths = player.playerStats.reduce(
+        const totalDeaths = stats.reduce(
           (total, stat) =>
             total + (Number.parseInt(String(stat.deaths ?? 0), 10) || 0),
           0,
@@ -1225,14 +1230,12 @@ apiRouter.get("/rankings/players", async (req, res) => {
           fallbackScore: player.faceitElo ?? player.skillLevel ?? 0,
         };
       })
-      .filter((player) => player.kills > 0 || player.deaths > 0)
       .sort(
-        (a, b) =>
-          b.kdRatio - a.kdRatio ||
-          b.fallbackScore - a.fallbackScore,
+        (a, b) => b.kdRatio - a.kdRatio || b.fallbackScore - a.fallbackScore,
       )
       .slice(0, 50);
 
+    console.log("Player stats check:", players[0]);
     res.json(rankings);
   } catch (error) {
     console.error("Failed to fetch player rankings:", error);
