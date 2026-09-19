@@ -15,6 +15,7 @@ export default function AdminTournaments() {
   const [submitting, setSubmitting] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   if (loading) return null;
   if (!isAdminUser(user)) return <Navigate to="/" replace />;
@@ -114,6 +115,32 @@ export default function AdminTournaments() {
     }
   };
 
+  const syncPlayerStats = async () => {
+    setSyncing(true);
+    try {
+      const response = await apiFetch("/api/admin/sync-stats", {
+        method: "POST",
+        credentials: "include",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || "Player stats sync failed.");
+      }
+
+      alert(
+        `Tilastot haettu FACEITista ja tallennettu tietokantaan! (${result.statsSaved ?? 0} pelaajatilastoa)`,
+      );
+    } catch (syncError) {
+      alert(
+        syncError instanceof Error
+          ? syncError.message
+          : "Pelaajatilastojen synkronointi epäonnistui.",
+      );
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <main className="w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div className="flex items-center gap-3 mb-3">
@@ -167,7 +194,7 @@ export default function AdminTournaments() {
         <button
           type="button"
           onClick={clearActiveTournament}
-          disabled={submitting || clearing || recalculating}
+          disabled={submitting || clearing || recalculating || syncing}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-red-800 text-red-300 font-bold px-5 py-3 rounded-sm hover:bg-red-950 disabled:opacity-50"
         >
           <Trash2 className="w-4 h-4" />
@@ -182,7 +209,7 @@ export default function AdminTournaments() {
         <button
           type="button"
           onClick={recalculateElo}
-          disabled={submitting || clearing || recalculating}
+          disabled={submitting || clearing || recalculating || syncing}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-amber-400 text-black font-bold px-5 py-3 rounded-sm hover:bg-amber-300 disabled:opacity-50"
         >
           <RefreshCw
@@ -193,6 +220,17 @@ export default function AdminTournaments() {
               ? "Lasketaan..."
               : "Recalculating..."
             : "Recalculate Historical Elo"}
+        </button>
+        <button
+          type="button"
+          onClick={syncPlayerStats}
+          disabled={submitting || clearing || recalculating || syncing}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-400 text-black font-bold px-5 py-3 rounded-sm hover:bg-emerald-300 disabled:opacity-50"
+        >
+          <RefreshCw
+            className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`}
+          />
+          {syncing ? "Päivitetään..." : "Päivitä pelaajatilastot"}
         </button>
         {message && <p className="text-emerald-400 text-sm">{message}</p>}
         {error && <p className="text-red-300 text-sm">{error}</p>}
