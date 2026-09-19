@@ -1191,6 +1191,12 @@ apiRouter.get("/rankings/teams", async (req, res) => {
 });
 
 apiRouter.get("/rankings/players", async (req, res) => {
+  const getNumber = (value: unknown) => {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    if (typeof value === "string") return parseInt(value, 10) || 0;
+    return 0;
+  };
   const fallbackRankings = async () => {
     const players = await prisma.player.findMany({
       take: 50,
@@ -1212,13 +1218,12 @@ apiRouter.get("/rankings/players", async (req, res) => {
   };
 
   try {
-    const matchStats = await prisma.playerMatchStat.findMany({
-      select: {
-        playerId: true,
-        kills: true,
-        deaths: true,
-      },
-    });
+    const matchStats = await prisma.playerMatchStat.findMany();
+    const sampleStat = matchStats[0];
+    console.log(
+      "Sample match stat record:",
+      JSON.stringify(sampleStat),
+    );
     if (matchStats.length === 0) {
       return res.json(await fallbackRankings());
     }
@@ -1255,12 +1260,21 @@ apiRouter.get("/rankings/players", async (req, res) => {
     >();
 
     for (const stat of matchStats) {
+      const rawStat = stat as typeof stat & {
+        stats?: { kills?: unknown; deaths?: unknown };
+        Kills?: unknown;
+        Deaths?: unknown;
+      };
       const totals = totalsByPlayer.get(stat.playerId) || {
         totalKills: 0,
         totalDeaths: 0,
       };
-      totals.totalKills += parseInt(String(stat.kills || 0), 10) || 0;
-      totals.totalDeaths += parseInt(String(stat.deaths || 0), 10) || 0;
+      totals.totalKills += getNumber(
+        rawStat.kills ?? rawStat.stats?.kills ?? rawStat.Kills,
+      );
+      totals.totalDeaths += getNumber(
+        rawStat.deaths ?? rawStat.stats?.deaths ?? rawStat.Deaths,
+      );
       totalsByPlayer.set(stat.playerId, totals);
     }
 
