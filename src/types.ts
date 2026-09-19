@@ -48,6 +48,7 @@ export interface Tournament {
   registeredTeamsCount: number;
   teamsCount?: number;
   slots: number;
+  _count?: { teams: number };
   entryFee: number;
   format: string; // e.g., 'Single Elimination'
   registrationDeadline: string;

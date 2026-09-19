@@ -277,6 +277,19 @@ export default function TournamentDetails() {
       })()
     : "TBA";
   const tournamentFormat = tournament?.format || "FACEIT";
+  const teamCount =
+    tournament._count?.teams ||
+    tournament.teams?.length ||
+    tournament.teamsCount ||
+    0;
+  const isStartedOrFinished = [
+    "started",
+    "finished",
+    "cancelled",
+  ].includes(tournament.status);
+  const bracketSlots =
+    teamCount > 0 ? Math.pow(2, Math.ceil(Math.log2(teamCount))) : 0;
+  const regSlots = tournament.slots > teamCount ? tournament.slots : teamCount;
 
   return (
     <div className="w-full">
@@ -306,8 +319,7 @@ export default function TournamentDetails() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Users className="w-4 h-4" />{" "}
-                  {(tournament.registeredTeamsCount ?? tournament.teams?.length ?? 0)}/
-                  {tournament.teamCapacity}{" "}
+                  {teamCount} / {isStartedOrFinished ? bracketSlots : regSlots}{" "}
                   {language === "fi" ? "joukkuetta" : "teams"}
                 </span>
               </div>

@@ -316,7 +316,9 @@ apiRouter.post("/auth/faceit/link", authMiddleware, async (req, res) => {
 
 // GET all tournaments
 apiRouter.get("/tournaments", async (req, res) => {
-  const tournaments = await prisma.tournament.findMany();
+  const tournaments = await prisma.tournament.findMany({
+    include: { _count: { select: { teams: true } } },
+  });
   res.json(tournaments);
 });
 
@@ -330,6 +332,7 @@ apiRouter.get("/tournaments/active", async (_req, res) => {
   return res.json({
     tournament: {
       ...tournamentData,
+      _count,
       registeredTeamsCount: _count.teams,
     },
     brackets: tournament.bracketData,
@@ -345,6 +348,7 @@ apiRouter.get("/tournaments/:id", async (req, res) => {
     include: {
       teams: { include: { players: { orderBy: { nickname: "asc" } } } },
       matches: { include: { team1: true, team2: true } },
+      _count: { select: { teams: true } },
     },
   });
   res.json(

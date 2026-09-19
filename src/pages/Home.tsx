@@ -287,6 +287,7 @@ export default function Home() {
                     <span>
                       {(() => {
                         const teamCount =
+                          featuredTournament._count?.teams ||
                           featuredTournament.teams?.length ||
                           featuredTournament.teamsCount ||
                           0;
