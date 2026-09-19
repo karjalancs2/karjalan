@@ -1372,7 +1372,11 @@ apiRouter.post("/admin/sync-stats", authMiddleware, async (req, res) => {
 
   try {
     const matches = await prisma.match.findMany({
-      where: { status: "finished" },
+      where: {
+        team1Id: { not: null },
+        team2Id: { not: null },
+        OR: [{ team1Score: { gt: 0 } }, { team2Score: { gt: 0 } }],
+      },
       select: { id: true },
     });
     let matchesProcessed = 0;

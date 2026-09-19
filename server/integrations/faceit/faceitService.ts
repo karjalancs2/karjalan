@@ -1021,47 +1021,66 @@ export class FaceitService {
     const localPlayersByFaceitId = new Map(
       localPlayers.map((player) => [player.faceitId, player]),
     );
-    const stats = await this.getMatchStats(match.faceitId);
+    const faceitResponse = await this.getMatchStats(match.faceitId);
+    const rounds = faceitResponse?.data?.rounds || faceitResponse?.rounds || [];
+    if (!rounds.length) return 0;
+
+    const extractedStats: Array<{
+      faceitPlayerId: string;
+      kills: number;
+      deaths: number;
+      headshots: number;
+    }> = [];
+    for (const team of rounds[0]?.teams || []) {
+      for (const player of team?.players || []) {
+        const playerStats = player?.player_stats || player?.stats || {};
+        extractedStats.push({
+          faceitPlayerId: String(player?.player_id || player?.id || ""),
+          kills: parseInt(
+            String(playerStats.Kills || playerStats.kills || 0),
+            10,
+          ) || 0,
+          deaths: parseInt(
+            String(playerStats.Deaths || playerStats.deaths || 0),
+            10,
+          ) || 0,
+          headshots: parseInt(
+            String(playerStats.Headshots || playerStats.headshots || 0),
+            10,
+          ) || 0,
+        });
+      }
+    }
+    console.log(
+      `Extracted ${extractedStats.length} player stats for match ${match.faceitId}`,
+    );
     let saved = 0;
 
-    for (const statsTeam of stats?.rounds?.[0]?.teams || []) {
-      for (const player of statsTeam?.players || []) {
-        const faceitId = String(player?.player_id || player?.id || "");
-        const localPlayer = localPlayersByFaceitId.get(faceitId);
-        if (!localPlayer) continue;
+    for (const extractedStat of extractedStats) {
+      const localPlayer = localPlayersByFaceitId.get(
+        extractedStat.faceitPlayerId,
+      );
+      if (!localPlayer) continue;
 
-        const playerStats = player?.player_stats || {};
-        const statValue = (key: string) =>
-          Math.max(
-            0,
-            Math.trunc(
-              Number(
-                playerStats[key] ?? playerStats[key.toLowerCase()] ?? 0,
-              ) || 0,
-            ),
-          );
-        await prisma.playerMatchStat.upsert({
-          where: {
-            playerId_matchId: {
-              playerId: localPlayer.id,
-              matchId: match.id,
-            },
-          },
-          update: {
-            kills: statValue("Kills"),
-            deaths: statValue("Deaths"),
-            assists: statValue("Assists"),
-          },
-          create: {
+      await prisma.playerMatchStat.upsert({
+        where: {
+          playerId_matchId: {
             playerId: localPlayer.id,
             matchId: match.id,
-            kills: statValue("Kills"),
-            deaths: statValue("Deaths"),
-            assists: statValue("Assists"),
           },
-        });
-        saved += 1;
-      }
+        },
+        update: {
+          kills: extractedStat.kills,
+          deaths: extractedStat.deaths,
+        },
+        create: {
+          playerId: localPlayer.id,
+          matchId: match.id,
+          kills: extractedStat.kills,
+          deaths: extractedStat.deaths,
+        },
+      });
+      saved += 1;
     }
 
     return saved;
