@@ -4,6 +4,7 @@ import { RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { isAdminUser, useAuth } from "../contexts/AuthContext";
 import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../lib/api";
+import { apiFetch } from "../lib/http";
 
 export default function AdminTournaments() {
   const { user, loading } = useAuth();
@@ -13,6 +14,7 @@ export default function AdminTournaments() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
 
   if (loading) return null;
   if (!isAdminUser(user)) return <Navigate to="/" replace />;
@@ -80,6 +82,38 @@ export default function AdminTournaments() {
     }
   };
 
+  const recalculateElo = async () => {
+    setMessage(null);
+    setError(null);
+    setRecalculating(true);
+    try {
+      const response = await apiFetch("/api/admin/recalculate-elo", {
+        method: "POST",
+        credentials: "include",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || "Elo recalculation failed.");
+      }
+
+      setMessage(
+        language === "fi"
+          ? `Historiallinen Elo päivitetty. ${result.matchesProcessed ?? 0} ottelua käsitelty.`
+          : `Historical Elo recalculated. ${result.matchesProcessed ?? 0} matches processed.`,
+      );
+    } catch (recalculateError) {
+      setError(
+        recalculateError instanceof Error
+          ? recalculateError.message
+          : language === "fi"
+            ? "Historiallisen Elon päivitys epäonnistui."
+            : "Historical Elo recalculation failed.",
+      );
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
   return (
     <main className="w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div className="flex items-center gap-3 mb-3">
@@ -133,7 +167,7 @@ export default function AdminTournaments() {
         <button
           type="button"
           onClick={clearActiveTournament}
-          disabled={submitting || clearing}
+          disabled={submitting || clearing || recalculating}
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-red-800 text-red-300 font-bold px-5 py-3 rounded-sm hover:bg-red-950 disabled:opacity-50"
         >
           <Trash2 className="w-4 h-4" />
@@ -144,6 +178,21 @@ export default function AdminTournaments() {
             : language === "fi"
               ? "Tyhjennä aktiivinen turnaus"
               : "Clear active tournament"}
+        </button>
+        <button
+          type="button"
+          onClick={recalculateElo}
+          disabled={submitting || clearing || recalculating}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-amber-400 text-black font-bold px-5 py-3 rounded-sm hover:bg-amber-300 disabled:opacity-50"
+        >
+          <RefreshCw
+            className={`w-4 h-4 ${recalculating ? "animate-spin" : ""}`}
+          />
+          {recalculating
+            ? language === "fi"
+              ? "Lasketaan..."
+              : "Recalculating..."
+            : "Recalculate Historical Elo"}
         </button>
         {message && <p className="text-emerald-400 text-sm">{message}</p>}
         {error && <p className="text-red-300 text-sm">{error}</p>}
