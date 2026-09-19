@@ -162,7 +162,7 @@ export default function Home() {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col gap-16 sm:gap-24">
         {/* Live Matches */}
         {featuredTournament && (
-          <section className="flex flex-col gap-6">
+          <section className="order-2 flex flex-col gap-6">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
               <h2 className="text-2xl font-bold tracking-wide uppercase">
@@ -265,7 +265,7 @@ export default function Home() {
 
         {/* Featured Tournament */}
         {featuredTournament && (
-          <section className="flex flex-col gap-6">
+          <section className="order-1 flex flex-col gap-6">
             <h2 className="text-2xl font-bold tracking-wide uppercase">
               {language === "fi" ? "Suositeltu Turnaus" : "Featured Tournament"}
             </h2>
@@ -285,8 +285,29 @@ export default function Home() {
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-neutral-500" />
                     <span>
-                      {featuredTournament.registeredTeamsCount} /{" "}
-                      {featuredTournament.teamCapacity} {t("team.slots")}
+                      {(() => {
+                        const teamCount =
+                          featuredTournament.teams?.length ||
+                          featuredTournament.teamsCount ||
+                          0;
+                        const isStartedOrFinished = [
+                          "started",
+                          "finished",
+                          "cancelled",
+                        ].includes(featuredTournament.status);
+                        const bracketSlots =
+                          teamCount > 0
+                            ? Math.pow(2, Math.ceil(Math.log2(teamCount)))
+                            : 0;
+                        const regSlots =
+                          featuredTournament.slots > teamCount
+                            ? featuredTournament.slots
+                            : teamCount;
+
+                        return `${teamCount} / ${isStartedOrFinished ? bracketSlots : regSlots} ${t(
+                          "team.slots",
+                        )}`;
+                      })()}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -320,7 +341,7 @@ export default function Home() {
         )}
 
         {featuredTournament && (
-          <section className="flex flex-col gap-6">
+          <section className="order-3 flex flex-col gap-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold tracking-wide uppercase">
                 Parhaat Pelaajat
@@ -391,7 +412,7 @@ export default function Home() {
         )}
 
         {featuredTournament && (
-          <section className="flex flex-col gap-6">
+          <section className="order-2 flex flex-col gap-6">
             <h2 className="text-2xl font-bold tracking-wide uppercase">
               {language === "fi" ? "Tulevat ottelut" : "Upcoming matches"}
             </h2>
@@ -423,7 +444,7 @@ export default function Home() {
         )}
 
         {/* Discord CTA */}
-        <section className="w-full bg-[#121212] border border-amber-500/20 rounded-lg p-8 sm:p-12 flex flex-col items-center text-center gap-6 backdrop-blur">
+        <section className="order-4 w-full bg-[#121212] border border-amber-500/20 rounded-lg p-8 sm:p-12 flex flex-col items-center text-center gap-6 backdrop-blur">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight uppercase">
             {language === "fi"
               ? "LIITY KARJALAN-YHTEISÖÖN"

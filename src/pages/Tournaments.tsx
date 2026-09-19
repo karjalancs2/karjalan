@@ -88,6 +88,19 @@ export default function Tournaments() {
                   })
                 : "TBA";
             const tournamentName = tournament?.name || "Untitled tournament";
+            const teamCount =
+              tournament.teams?.length || tournament.teamsCount || 0;
+            const isStartedOrFinished = [
+              "started",
+              "finished",
+              "cancelled",
+            ].includes(tournament.status);
+            const bracketSlots =
+              teamCount > 0
+                ? Math.pow(2, Math.ceil(Math.log2(teamCount)))
+                : 0;
+            const regSlots =
+              tournament.slots > teamCount ? tournament.slots : teamCount;
 
             return (
               <Link
@@ -133,8 +146,9 @@ export default function Tournaments() {
                       <div className="flex items-center gap-1.5">
                         <Users className="w-4 h-4 text-neutral-500" />
                         <span>
-                          {tournament.registeredTeamsCount} /{" "}
-                          {tournament.teamCapacity}
+                          {teamCount} /{" "}
+                          {isStartedOrFinished ? bracketSlots : regSlots}{" "}
+                          {t("team.slots")}
                         </span>
                       </div>
                     </div>

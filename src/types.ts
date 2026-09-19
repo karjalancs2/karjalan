@@ -46,6 +46,8 @@ export interface Tournament {
   prizePool: number;
   teamCapacity: number;
   registeredTeamsCount: number;
+  teamsCount?: number;
+  slots: number;
   entryFee: number;
   format: string; // e.g., 'Single Elimination'
   registrationDeadline: string;
