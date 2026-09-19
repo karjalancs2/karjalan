@@ -323,11 +323,15 @@ apiRouter.get("/tournaments", async (req, res) => {
 apiRouter.get("/tournaments/active", async (_req, res) => {
   const tournament = await prisma.tournament.findFirst({
     where: { isActive: true },
-    include: { matches: true },
+    include: { matches: true, _count: { select: { teams: true } } },
   });
   if (!tournament) return res.json(null);
+  const { _count, ...tournamentData } = tournament;
   return res.json({
-    tournament,
+    tournament: {
+      ...tournamentData,
+      registeredTeamsCount: _count.teams,
+    },
     brackets: tournament.bracketData,
     matches: tournament.matches,
   });
@@ -343,7 +347,11 @@ apiRouter.get("/tournaments/:id", async (req, res) => {
       matches: { include: { team1: true, team2: true } },
     },
   });
-  res.json(tournament || null);
+  res.json(
+    tournament
+      ? { ...tournament, registeredTeamsCount: tournament.teams.length }
+      : null,
+  );
 });
 
 // GET matches by tournament

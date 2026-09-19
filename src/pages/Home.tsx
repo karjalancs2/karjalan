@@ -269,7 +269,10 @@ export default function Home() {
             <h2 className="text-2xl font-bold tracking-wide uppercase">
               {language === "fi" ? "Suositeltu Turnaus" : "Featured Tournament"}
             </h2>
-            <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 sm:p-8 flex flex-col md:flex-row gap-8 items-center relative overflow-hidden">
+            <Link
+              to={`/tournaments/${featuredTournament.id}`}
+              className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 sm:p-8 flex flex-col md:flex-row gap-8 items-center relative overflow-hidden hover:border-amber-500/50 transition-colors"
+            >
               <div className="absolute -right-20 -top-20 opacity-5 pointer-events-none">
                 <Trophy className="w-96 h-96" />
               </div>
@@ -306,16 +309,13 @@ export default function Home() {
 
                 {isRegistrationOpen && (
                   <div className="mt-4">
-                    <Link
-                      to={`/tournaments/${featuredTournament.id}`}
-                      className="bg-white text-black px-8 py-3 rounded-sm font-bold hover:bg-neutral-200 transition-colors inline-block"
-                    >
+                    <span className="bg-white text-black px-8 py-3 rounded-sm font-bold inline-block">
                       {t("btn.register")}
-                    </Link>
+                    </span>
                   </div>
                 )}
               </div>
-            </div>
+            </Link>
           </section>
         )}
 

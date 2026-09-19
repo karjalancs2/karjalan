@@ -306,7 +306,8 @@ export default function TournamentDetails() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Users className="w-4 h-4" />{" "}
-                  {tournament.registeredTeamsCount}/{tournament.teamCapacity}{" "}
+                  {(tournament.registeredTeamsCount ?? tournament.teams?.length ?? 0)}/
+                  {tournament.teamCapacity}{" "}
                   {language === "fi" ? "joukkuetta" : "teams"}
                 </span>
               </div>
