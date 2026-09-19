@@ -466,7 +466,7 @@ export default function TournamentDetails() {
         )}
 
         {activeTab === "bracket" && (
-          <div className="w-full overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="bracket-container w-full overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
             {matchList.length === 0 ? (
               <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-neutral-400">
                 No bracket data available for this event yet.

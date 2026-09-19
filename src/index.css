@@ -4,3 +4,16 @@
   position: relative;
   overflow: visible;
 }
+
+.bracket-container::-webkit-scrollbar {
+  height: 10px;
+}
+
+.bracket-container::-webkit-scrollbar-track {
+  background: #121212;
+}
+
+.bracket-container::-webkit-scrollbar-thumb {
+  background: #d97706;
+  border-radius: 6px;
+}
