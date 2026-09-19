@@ -1191,6 +1191,26 @@ apiRouter.get("/rankings/teams", async (req, res) => {
 });
 
 apiRouter.get("/rankings/players", async (req, res) => {
+  const fallbackRankings = async () => {
+    const players = await prisma.player.findMany({
+      take: 50,
+      select: {
+        id: true,
+        nickname: true,
+        avatar: true,
+        team: {
+          select: { id: true, name: true, logo: true },
+        },
+      },
+    });
+    return players.map((player) => ({
+      ...player,
+      kills: 0,
+      deaths: 0,
+      kdRatio: 0,
+    }));
+  };
+
   try {
     const matchStats = await prisma.playerMatchStat.findMany({
       select: {
@@ -1199,6 +1219,9 @@ apiRouter.get("/rankings/players", async (req, res) => {
         deaths: true,
       },
     });
+    if (matchStats.length === 0) {
+      return res.json(await fallbackRankings());
+    }
     const playerIdentifiers = [
       ...new Set(matchStats.map((stat) => stat.playerId)),
     ];
@@ -1265,11 +1288,15 @@ apiRouter.get("/rankings/players", async (req, res) => {
       .sort((a, b) => b.kdRatio - a.kdRatio)
       .slice(0, 50);
 
-    console.log("Player stats check:", matchStats[0]);
-    res.json(rankings);
+    return res.json(rankings.length > 0 ? rankings : await fallbackRankings());
   } catch (error) {
-    console.error("Failed to fetch player rankings:", error);
-    res.status(500).json({ error: "Failed to fetch player rankings" });
+    console.log("Rankings player error:", error);
+    try {
+      return res.json(await fallbackRankings());
+    } catch (fallbackError) {
+      console.error("Failed to fetch fallback player rankings:", fallbackError);
+      return res.status(500).json({ error: "Failed to fetch player rankings" });
+    }
   }
 });
 
