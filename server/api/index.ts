@@ -1317,15 +1317,22 @@ apiRouter.post("/admin/recalculate-elo", authMiddleware, async (req, res) => {
     await prisma.team.updateMany({ data: { rankingPoints: 1000 } });
     const matches = await prisma.match.findMany({
       where: {
-        team1Id: { not: null },
-        team2Id: { not: null },
-        OR: [{ team1Score: { gt: 0 } }, { team2Score: { gt: 0 } }],
+        OR: [
+          { team1Score: { gt: 0 } },
+          { team2Score: { gt: 0 } },
+          { team1Id: null },
+          { team2Id: null },
+          { team1: { is: { name: { in: ["Bye", "BYE"] } } } },
+          { team2: { is: { name: { in: ["Bye", "BYE"] } } } },
+        ],
       },
       orderBy: { createdAt: "asc" },
       select: {
         id: true,
         team1Id: true,
         team2Id: true,
+        team1: { select: { name: true } },
+        team2: { select: { name: true } },
         team1Score: true,
         team2Score: true,
       },
@@ -1333,9 +1340,27 @@ apiRouter.post("/admin/recalculate-elo", authMiddleware, async (req, res) => {
 
     let processed = 0;
     for (const match of matches) {
+      const team1IsBye =
+        !match.team1Id || match.team1?.name === "Bye" || match.team1?.name === "BYE";
+      const team2IsBye =
+        !match.team2Id || match.team2?.name === "Bye" || match.team2?.name === "BYE";
+
+      if (team1IsBye || team2IsBye) {
+        const advancingTeamId = team1IsBye
+          ? team2IsBye ? null : match.team2Id
+          : match.team1Id;
+
+        if (advancingTeamId) {
+          await prisma.team.update({
+            where: { id: advancingTeamId },
+            data: { rankingPoints: { increment: 25 } },
+          });
+          processed += 1;
+        }
+        continue;
+      }
+
       if (
-        !match.team1Id ||
-        !match.team2Id ||
         match.team1Score === match.team2Score
       ) {
         continue;
