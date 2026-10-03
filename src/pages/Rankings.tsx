@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { PlayerRanking, Team } from "../types";
 
 export default function Rankings() {
-  const { language } = useTranslation();
+  const { t } = useTranslation();
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<PlayerRanking[]>([]);
   const [activeTab, setActiveTab] = useState<"teams" | "players">("teams");
@@ -26,20 +26,18 @@ export default function Rankings() {
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="mb-10">
         <h1 className="text-4xl font-extrabold tracking-tight mb-4">
-          {language === "fi" ? "KARJALAN RANKINGIT" : "KARJALAN RANKINGS"}
+          {t("rankings.title")}
         </h1>
         <p className="text-neutral-400 max-w-2xl text-lg">
-          {language === "fi"
-            ? "Rankingit perustuvat päättyneiden turnausten tuloksiin."
-            : "Rankings based on results from finished tournaments."}
+          {t("rankings.description")}
         </p>
       </div>
 
       <div className="flex gap-6 mb-8 border-b border-neutral-800">
         {(
           [
-            ["teams", language === "fi" ? "Joukkueet" : "Teams"],
-            ["players", language === "fi" ? "Pelaajat" : "Players"],
+            ["teams", t("rankings.teams")],
+            ["players", t("rankings.players")],
           ] as const
         ).map(([tab, label]) => (
           <button
@@ -57,16 +55,12 @@ export default function Rankings() {
           <thead>
             <tr className="bg-neutral-950 border-b border-neutral-800 text-xs uppercase tracking-wider text-neutral-500">
               <th className="px-6 py-4 font-bold w-20 text-center">
-                {language === "fi" ? "Sija" : "Rank"}
+                {t("rankings.rank")}
               </th>
               <th className="px-6 py-4 font-bold">
                 {activeTab === "teams"
-                  ? language === "fi"
-                    ? "Joukkue"
-                    : "Team"
-                  : language === "fi"
-                    ? "Pelaaja"
-                    : "Player"}
+                  ? t("rankings.team")
+                  : t("rankings.player")}
               </th>
               <th className="px-6 py-4 font-bold text-right">
                 {activeTab === "teams" ? "Elo" : "K/D"}
@@ -148,9 +142,7 @@ export default function Rankings() {
         {((activeTab === "teams" && teams.length === 0) ||
           (activeTab === "players" && players.length === 0)) && (
           <div className="p-8 text-center text-neutral-500">
-            {language === "fi"
-              ? "Ei ranking-tuloksia päättyneistä turnauksista."
-              : "No rankings from finished tournaments yet."}
+            {t("rankings.empty")}
           </div>
         )}
       </div>

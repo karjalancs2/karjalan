@@ -69,9 +69,9 @@ export default function Home() {
             ? format(parsed, "EEEE HH:mm", {
                 locale: language === "fi" ? fi : enUS,
               })
-            : "TBA";
+            : t("common.tbd");
         })()
-      : "TBA";
+      : t("common.tbd");
   const TeamMark = ({ team }: { team?: Team }) => {
     const name = safeString(team?.name, "?");
     if (!team?.logo) {
@@ -116,12 +116,12 @@ export default function Home() {
     tournamentStatus === "finished" ||
     tournamentStatus === "cancelled" ||
     tournamentEndedByDate
-      ? "PÄÄTTYNYT"
+      ? t("status.finished")
       : tournamentStatus === "started"
-        ? "KÄYNNISSÄ"
+        ? t("status.started")
         : isRegistrationOpen
-          ? "ILMOITTAUTUMINEN AUKI"
-          : "TILA TUNTEMATON";
+          ? t("status.registration_open")
+          : t("status.unknown");
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -166,7 +166,7 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
               <h2 className="text-2xl font-bold tracking-wide uppercase">
-                Käynnissä olevat ottelut
+                {t("home.live_matches")}
               </h2>
             </div>
             {liveMatchList.length > 0 ? (
@@ -184,8 +184,8 @@ export default function Home() {
                         <span>
                           {match?.tournamentId === "tr1"
                             ? "Karjalan CS2 Cup #1"
-                            : "Turnaus"}{" "}
-                          — {match?.round || "Match"}
+                            : t("common.tournament")}{" "}
+                          — {match?.round || t("common.match")}
                         </span>
                         <span>{match?.map || "-"}</span>
                       </div>
@@ -194,7 +194,8 @@ export default function Home() {
                         <div className="flex flex-col items-center gap-3 w-1/3">
                           <TeamMark team={team1} />
                           <span className="font-semibold text-center leading-tight">
-                            {safeString(team1?.name, "TBD") || "TBD"}
+                            {safeString(team1?.name, t("common.tbd")) ||
+                              t("common.tbd")}
                           </span>
                         </div>
 
@@ -225,7 +226,7 @@ export default function Home() {
                           </div>
                           <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded flex items-center gap-1">
                             <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>{" "}
-                            LIVE
+                            {t("live.now")}
                           </span>
                         </div>
 
@@ -233,7 +234,8 @@ export default function Home() {
                         <div className="flex flex-col items-center gap-3 w-1/3">
                           <TeamMark team={team2} />
                           <span className="font-semibold text-center leading-tight">
-                            {safeString(team2?.name, "TBD") || "TBD"}
+                            {safeString(team2?.name, t("common.tbd")) ||
+                              t("common.tbd")}
                           </span>
                         </div>
                       </div>
@@ -256,8 +258,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="rounded-lg border border-amber-500/20 bg-[#121212]/90 p-6 text-neutral-400 backdrop-blur">
-                Tulevat ottelut näkyvät täällä, kun seuraava peli on
-                vahvistettu.
+                {t("home.live_empty")}
               </div>
             )}
           </section>
@@ -267,7 +268,7 @@ export default function Home() {
         {featuredTournament && (
           <section className="order-1 flex flex-col gap-6">
             <h2 className="text-2xl font-bold tracking-wide uppercase">
-              {language === "fi" ? "Suositeltu Turnaus" : "Featured Tournament"}
+              {t("home.featured_tournament")}
             </h2>
             <Link
               to={`/tournaments/${featuredTournament.id}`}
@@ -345,7 +346,7 @@ export default function Home() {
           <section className="order-3 flex flex-col gap-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold tracking-wide uppercase">
-                Parhaat Pelaajat
+                {t("home.top_players")}
               </h2>
               <Medal className="h-6 w-6 text-amber-400" />
             </div>
@@ -365,7 +366,7 @@ export default function Home() {
                         #{rank}
                       </span>
                       <span className="text-xs uppercase tracking-widest text-neutral-500">
-                        Top player
+                        {t("home.top_player")}
                       </span>
                     </div>
                     <div className="flex items-center gap-4">
@@ -392,7 +393,7 @@ export default function Home() {
                           {player.nickname}
                         </h3>
                         <p className="truncate text-sm text-neutral-500">
-                          {team?.name || "FACEIT player"}
+                          {team?.name || t("home.faceit_player")}
                         </p>
                       </div>
                     </div>
@@ -404,7 +405,9 @@ export default function Home() {
                         </strong>
                       </div>
                       <div>
-                        <span className="block text-neutral-500">Kills</span>
+                        <span className="block text-neutral-500">
+                          {t("home.kills")}
+                        </span>
                         <strong className="text-amber-400">
                           {player.kills || 0}
                         </strong>
@@ -420,11 +423,11 @@ export default function Home() {
         {featuredTournament && (
           <section className="order-2 flex flex-col gap-6">
             <h2 className="text-2xl font-bold tracking-wide uppercase">
-              {language === "fi" ? "Tulevat ottelut" : "Upcoming matches"}
+              {t("home.upcoming_matches")}
             </h2>
             {upcomingMatchList.length === 0 ? (
               <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-neutral-400">
-                No match data available for this event yet.
+                {t("home.matches_empty")}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -434,13 +437,13 @@ export default function Home() {
                     className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 flex items-center justify-between"
                   >
                     <span className="font-semibold">
-                      {match?.team1Id || "TBA"}
+                      {match?.team1Id || t("common.tbd")}
                     </span>
                     <span className="text-neutral-500 text-sm">
-                      {match?.round || "Match"}
+                      {match?.round || t("common.match")}
                     </span>
                     <span className="font-semibold">
-                      {match?.team2Id || "TBA"}
+                      {match?.team2Id || t("common.tbd")}
                     </span>
                   </div>
                 ))}
@@ -452,23 +455,13 @@ export default function Home() {
         {/* Discord CTA */}
         <section className="order-4 w-full bg-[#121212] border border-amber-500/20 rounded-lg p-8 sm:p-12 flex flex-col items-center text-center gap-6 backdrop-blur">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight uppercase">
-            {language === "fi"
-              ? "LIITY KARJALAN-YHTEISÖÖN"
-              : "JOIN THE KARJALAN COMMUNITY"}
+            {t("home.community_title")}
           </h2>
           <div className="text-lg text-neutral-300 max-w-lg flex flex-col gap-2">
-            <p>
-              {language === "fi" ? "Löydä pelikavereita." : "Find teammates."}
-            </p>
-            <p>
-              {language === "fi" ? "Löydä turnauksia." : "Find tournaments."}
-            </p>
-            <p>{language === "fi" ? "Kokoa joukkue." : "Build a team."}</p>
-            <p>
-              {language === "fi"
-                ? "Seuraa Suomen CS2-skeneä."
-                : "Follow the Finnish CS2 scene."}
-            </p>
+            <p>{t("home.community_find_players")}</p>
+            <p>{t("home.community_find_tournaments")}</p>
+            <p>{t("home.community_build_team")}</p>
+            <p>{t("home.community_follow_scene")}</p>
           </div>
           <a
             href="https://discord.gg/AnYwNXdt4"
@@ -476,7 +469,7 @@ export default function Home() {
             rel="noopener noreferrer"
             className="mt-4 bg-amber-400 hover:bg-amber-300 text-black font-bold px-8 py-4 rounded-sm transition-colors text-lg uppercase tracking-wide shadow-lg shadow-amber-950/30"
           >
-            {language === "fi" ? "LIITY DISCORDIIN" : "JOIN DISCORD"}
+            {t("home.community_join_discord")}
           </a>
         </section>
       </div>

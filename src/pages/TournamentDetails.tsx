@@ -5,12 +5,12 @@ import { api } from "../lib/api";
 import { Tournament, Match, Team, Player } from "../types";
 import { Trophy, Users, Calendar, Info, Clock, Shield, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { fi } from "date-fns/locale";
+import { enUS, fi } from "date-fns/locale";
 import { faceitTierClass, safeString } from "../lib/utils";
 
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
-  const { language } = useTranslation();
+  const { language, t } = useTranslation();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -45,9 +45,8 @@ export default function TournamentDetails() {
       .then((data) => {
         if (!cancelled) setMatchStats(data);
       })
-      .catch((error: any) => {
-        if (!cancelled)
-          setStatsError(error?.message || "Failed to load scoreboard");
+      .catch(() => {
+        if (!cancelled) setStatsError("tournament.scoreboard_error");
       })
       .finally(() => {
         if (!cancelled) setStatsLoading(false);
@@ -60,7 +59,7 @@ export default function TournamentDetails() {
   if (!tournament)
     return (
       <div className="p-12 text-center text-neutral-500 font-bold">
-        {language === "fi" ? "Ladataan..." : "Loading..."}
+        {t("tournament.loading")}
       </div>
     );
 
@@ -107,8 +106,8 @@ export default function TournamentDetails() {
   const scoreRows = (matchStats?.rounds || []).flatMap((round: any) =>
     (round?.teams || []).flatMap((team: any) =>
       (team?.players || []).map((player: any) => ({
-        team: team?.team_id || "Team",
-        nickname: player?.nickname || player?.player_id || "Player",
+        team: team?.team_id || t("common.team"),
+        nickname: player?.nickname || player?.player_id || t("common.player"),
         avatar: player?.avatar,
         stats: player?.player_stats || {},
       })),
@@ -128,10 +127,10 @@ export default function TournamentDetails() {
               index === 0 ? selectedMatch?.team1Id : selectedMatch?.team2Id,
             )?.name ||
               team?.team_id ||
-              `Team ${index + 1}`}
+              t("common.team")}
           </h3>
           <span className="text-xs uppercase tracking-widest text-yellow-500">
-            Score{" "}
+            {t("tournament.score")}{" "}
             {index === 0
               ? selectedMatch?.team1Score
               : selectedMatch?.team2Score}
@@ -141,10 +140,10 @@ export default function TournamentDetails() {
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase text-neutral-500 border-b border-neutral-800">
               <tr>
-                <th className="py-3 px-4">Player</th>
-                <th>Kills</th>
-                <th>Deaths</th>
-                <th>Assists (K/D/A)</th>
+                <th className="py-3 px-4">{t("common.player")}</th>
+                <th>{t("tournament.kills")}</th>
+                <th>{t("tournament.deaths")}</th>
+                <th>{t("tournament.assists_kda")}</th>
               </tr>
             </thead>
             <tbody>
@@ -254,28 +253,34 @@ export default function TournamentDetails() {
   );
   const tournamentStatusLabel =
     normalizedStatus === "finished" || normalizedStatus === "cancelled"
-      ? "PÄÄTTYNYT"
+      ? t("status.finished")
       : normalizedStatus === "started"
-        ? "KÄYNNISSÄ"
+        ? t("status.started")
         : isRegistrationOpen
-          ? "ILMOITTAUTUMINEN AUKI"
-          : "TILA TUNTEMATON";
+          ? t("status.registration_open")
+          : t("status.unknown");
   const formattedTournamentDate = tournament?.date
     ? (() => {
         const parsed = parseISO(tournament.date);
         return Number.isNaN(parsed.getTime())
-          ? "TBA"
-          : format(parsed, "dd.MM.yyyy", { locale: fi });
+          ? t("common.tbd")
+          : format(parsed, language === "fi" ? "dd.MM.yyyy" : "MMM d, yyyy", {
+              locale: language === "fi" ? fi : enUS,
+            });
       })()
-    : "TBA";
+    : t("common.tbd");
   const formattedRegistrationDeadline = tournament?.registrationDeadline
     ? (() => {
         const parsed = parseISO(tournament.registrationDeadline);
         return Number.isNaN(parsed.getTime())
-          ? "TBA"
-          : format(parsed, "dd.MM. yyyy HH:mm", { locale: fi });
+          ? t("common.tbd")
+          : format(
+              parsed,
+              language === "fi" ? "dd.MM.yyyy HH:mm" : "MMM d, yyyy HH:mm",
+              { locale: language === "fi" ? fi : enUS },
+            );
       })()
-    : "TBA";
+    : t("common.tbd");
   const tournamentFormat = tournament?.format || "FACEIT";
   const teamCount =
     tournament._count?.teams ||
@@ -318,7 +323,7 @@ export default function TournamentDetails() {
                 <span className="flex items-center gap-1.5">
                   <Users className="w-4 h-4" /> {teamCount} /{" "}
                   {isStartedOrFinished ? bracketSlots : regSlots}{" "}
-                  {language === "fi" ? "joukkuetta" : "teams"}
+                  {t("tournament.teams")}
                 </span>
               </div>
             </div>
@@ -327,7 +332,7 @@ export default function TournamentDetails() {
           {isRegistrationOpen && (
             <div className="w-full md:w-auto">
               <button className="w-full md:w-auto bg-white text-black font-bold px-8 py-3 rounded-sm hover:bg-neutral-200 transition-colors">
-                ILMOITTAUDU
+                {t("tournament.register")}
               </button>
             </div>
           )}
@@ -340,11 +345,11 @@ export default function TournamentDetails() {
           {[
             {
               id: "overview",
-              label: language === "fi" ? "Yleiskatsaus" : "Overview",
+              label: t("tournament.overview"),
             },
-            { id: "teams", label: language === "fi" ? "Joukkueet" : "Teams" },
-            { id: "bracket", label: language === "fi" ? "Kaavio" : "Bracket" },
-            { id: "matches", label: language === "fi" ? "Ottelut" : "Matches" },
+            { id: "teams", label: t("tournament.teams_tab") },
+            { id: "bracket", label: t("tournament.bracket") },
+            { id: "matches", label: t("tournament.matches") },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -365,34 +370,28 @@ export default function TournamentDetails() {
               <section className="bg-neutral-900 border border-neutral-800 rounded-lg p-8">
                 <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                   <Info className="w-5 h-5 text-neutral-500" />
-                  {language === "fi"
-                    ? "Turnauksen tiedot"
-                    : "Tournament details"}
+                  {t("tournament.details")}
                 </h2>
                 <div className="grid grid-cols-2 gap-y-6 gap-x-4 text-sm">
                   <div>
                     <span className="block text-neutral-500 mb-1 font-medium">
-                      {language === "fi" ? "Formaatti" : "Format"}
+                      {t("tournament.format")}
                     </span>
                     <span className="font-bold">{tournamentFormat}</span>
                   </div>
                   <div>
                     <span className="block text-neutral-500 mb-1 font-medium">
-                      {language === "fi" ? "Osallistumismaksu" : "Entry fee"}
+                      {t("tournament.entry_fee")}
                     </span>
                     <span className="font-bold">
                       {tournament.entryFee > 0
                         ? `€${tournament.entryFee}`
-                        : language === "fi"
-                          ? "Ilmainen"
-                          : "Free"}
+                        : t("tournaments.free")}
                     </span>
                   </div>
                   <div>
                     <span className="block text-neutral-500 mb-1 font-medium">
-                      {language === "fi"
-                        ? "Ilmoittautuminen päättyy"
-                        : "Registration closes"}
+                      {t("tournament.registration_deadline")}
                     </span>
                     <span className="font-bold">
                       {formattedRegistrationDeadline}
@@ -400,7 +399,7 @@ export default function TournamentDetails() {
                   </div>
                   <div>
                     <span className="block text-neutral-500 mb-1 font-medium">
-                      {language === "fi" ? "Järjestäjä" : "Organizer"}
+                      {t("tournament.organizer")}
                     </span>
                     <span className="font-bold">Karjalan</span>
                   </div>
@@ -410,13 +409,12 @@ export default function TournamentDetails() {
             <div className="flex flex-col gap-8">
               <section className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
                 <h2 className="font-bold mb-4">
-                  {language === "fi" ? "Palkintopotti" : "Prize pool"}: €
-                  {tournament.prizePool}
+                  {t("tournament.prize_pool")}: €{tournament.prizePool}
                 </h2>
                 <ul className="space-y-3 text-sm font-medium">
                   <li className="flex justify-between items-center">
                     <span className="text-yellow-500">
-                      {language === "fi" ? "1. Sija" : "1st place"}
+                      {t("tournament.first_place")}
                     </span>{" "}
                     <span>€{tournament.prizePool}</span>
                   </li>
@@ -425,20 +423,16 @@ export default function TournamentDetails() {
               {isRegistrationOpen && (
                 <section className="bg-neutral-900 border border-neutral-800 rounded-lg p-6">
                   <h2 className="font-bold mb-4">
-                    {language === "fi" ? "FACEIT-joukkue" : "FACEIT team"}
+                    {t("tournament.faceit_team")}
                   </h2>
                   <p className="text-sm text-neutral-400 mb-4">
-                    {language === "fi"
-                      ? "Linkitä joukkueesi FACEIT URL, jotta tiimi voidaan yhdistää turnaukseen."
-                      : "Link your team’s FACEIT URL so it can be connected to the tournament."}
+                    {t("tournament.link_faceit_desc")}
                   </p>
                   <a
                     href={`/tournaments/${tournament.id}/link-faceit-team`}
                     className="inline-flex items-center justify-center w-full bg-white text-black font-bold px-4 py-3 rounded-sm hover:bg-neutral-200 transition-colors"
                   >
-                    {language === "fi"
-                      ? "Linkitä FACEIT-joukkue"
-                      : "Link FACEIT team"}
+                    {t("tournament.link_faceit")}
                   </a>
                 </section>
               )}
@@ -450,9 +444,7 @@ export default function TournamentDetails() {
           <div className="space-y-4">
             {(tournament.teams || []).length === 0 ? (
               <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-8 text-neutral-400">
-                {language === "fi"
-                  ? "Ei rekisteröityjä joukkueita vielä."
-                  : "No registered teams yet."}
+                {t("tournament.no_teams")}
               </div>
             ) : (
               (tournament.teams || []).map((team) => (
@@ -470,13 +462,17 @@ export default function TournamentDetails() {
                       <div className="font-bold text-lg">{team.name}</div>
                       <div className="text-sm text-neutral-400">
                         {team.country || "FACEIT"} • {team.players?.length || 0}{" "}
-                        pelaajaa
+                        {t("tournament.players_count")}
                       </div>
                     </div>
                   </div>
                   <div className="text-right text-sm text-neutral-400">
-                    <div>Pisteet: {team.rankingPoints}</div>
-                    <div>Voitot: {team.wins}</div>
+                    <div>
+                      {t("tournament.points")}: {team.rankingPoints}
+                    </div>
+                    <div>
+                      {t("tournament.wins")}: {team.wins}
+                    </div>
                   </div>
                 </button>
               ))
@@ -488,7 +484,7 @@ export default function TournamentDetails() {
           <div className="bracket-container w-full overflow-x-auto pb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
             {matchList.length === 0 ? (
               <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-neutral-400">
-                No bracket data available for this event yet.
+                {t("tournament.no_bracket")}
               </div>
             ) : (
               <div className="min-w-[1200px] w-max min-h-[1000px] flex flex-row items-stretch gap-8 overflow-x-auto overflow-y-auto pb-4">
@@ -503,17 +499,23 @@ export default function TournamentDetails() {
                         <div className="mb-4 min-w-[220px] border-b border-neutral-800 pb-3 text-center">
                           <h3 className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-neutral-300">
                             {group.matches.length === 4
-                              ? "Quarter-finals"
+                              ? t("tournament.quarter_finals")
                               : group.matches.length === 2
-                                ? "Semi-finals"
+                                ? t("tournament.semi_finals")
                                 : group.matches.length === 1
-                                  ? "Grand finals"
+                                  ? t("tournament.grand_finals")
                                   : group.round > 0
-                                    ? `Round ${group.round}`
-                                    : "Unassigned"}
+                                    ? t("tournament.round").replace(
+                                        "{number}",
+                                        String(group.round),
+                                      )
+                                    : t("tournament.unassigned")}
                           </h3>
                           <p className="mt-1 text-[10px] uppercase tracking-wider text-neutral-600">
-                            {group.matches.length} matches - Best of 1
+                            {t("tournament.match_count").replace(
+                              "{count}",
+                              String(group.matches.length),
+                            )}
                           </p>
                         </div>
                         <div className="flex min-h-0 flex-1 flex-col">
@@ -536,8 +538,10 @@ export default function TournamentDetails() {
                                       const t1 = m
                                         ? getTeam(m?.team1Id) || {
                                             name:
-                                              safeString(m?.team1Name, "TBD") ||
-                                              "TBD",
+                                              safeString(
+                                                m?.team1Name,
+                                                t("common.tbd"),
+                                              ) || t("common.tbd"),
                                           }
                                         : null;
                                       const isBye =
@@ -553,8 +557,8 @@ export default function TournamentDetails() {
                                               name:
                                                 safeString(
                                                   m?.team2Name,
-                                                  "TBD",
-                                                ) || "TBD",
+                                                  t("common.tbd"),
+                                                ) || t("common.tbd"),
                                             };
                                       const team1Won =
                                         isBye ||
@@ -600,17 +604,23 @@ export default function TournamentDetails() {
                                           ) : (
                                             <>
                                               <span className="mb-2 text-[10px] font-bold uppercase tracking-widest text-neutral-600">
-                                                MATCH{" "}
-                                                {roundsWithSlots
-                                                  .slice(0, roundIndex)
-                                                  .reduce(
-                                                    (total, round) =>
-                                                      total +
-                                                      round.matches.length,
-                                                    0,
-                                                  ) +
-                                                  matchIndex +
-                                                  1}
+                                                {t(
+                                                  "tournament.match_number",
+                                                ).replace(
+                                                  "{number}",
+                                                  String(
+                                                    roundsWithSlots
+                                                      .slice(0, roundIndex)
+                                                      .reduce(
+                                                        (total, round) =>
+                                                          total +
+                                                          round.matches.length,
+                                                        0,
+                                                      ) +
+                                                      matchIndex +
+                                                      1,
+                                                  ),
+                                                )}
                                               </span>
                                               <button
                                                 type="button"
@@ -629,8 +639,8 @@ export default function TournamentDetails() {
                                                     />
                                                     {safeString(
                                                       t1?.name,
-                                                      "TBD",
-                                                    ) || "TBD"}
+                                                      t("common.tbd"),
+                                                    ) || t("common.tbd")}
                                                   </span>
                                                   <span
                                                     className={
@@ -662,11 +672,11 @@ export default function TournamentDetails() {
                                                       }
                                                     >
                                                       {isBye
-                                                        ? "BYE"
+                                                        ? t("common.bye")
                                                         : safeString(
                                                             t2?.name,
-                                                            "TBD",
-                                                          ) || "TBD"}
+                                                            t("common.tbd"),
+                                                          ) || t("common.tbd")}
                                                     </span>
                                                   </span>
                                                   <span
@@ -706,7 +716,7 @@ export default function TournamentDetails() {
           <div className="flex flex-col gap-4">
             {matchList.length === 0 ? (
               <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-neutral-400">
-                No match data available for this event yet.
+                {t("tournament.no_matches")}
               </div>
             ) : (
               matchList.map((match) => {
@@ -723,7 +733,8 @@ export default function TournamentDetails() {
                       <div className="flex-1 text-right font-bold text-lg">
                         <span className="inline-flex items-center gap-2">
                           <TeamLogo team={team1} />
-                          {safeString(team1?.name, "TBD") || "TBD"}
+                          {safeString(team1?.name, t("common.tbd")) ||
+                            t("common.tbd")}
                         </span>
                       </div>
                       <div className="flex flex-col items-center justify-center min-w-[100px]">
@@ -739,7 +750,8 @@ export default function TournamentDetails() {
                       <div className="flex-1 text-left font-bold text-lg">
                         <span className="inline-flex items-center gap-2">
                           <TeamLogo team={team2} />
-                          {safeString(team2?.name, "TBD") || "TBD"}
+                          {safeString(team2?.name, t("common.tbd")) ||
+                            t("common.tbd")}
                         </span>
                       </div>
                     </div>
@@ -765,7 +777,7 @@ export default function TournamentDetails() {
               <button
                 type="button"
                 onClick={() => setSelectedTeam(null)}
-                aria-label="Close roster"
+                aria-label={t("tournament.close_roster")}
                 className="text-neutral-400 hover:text-white"
               >
                 <X />
@@ -790,7 +802,7 @@ export default function TournamentDetails() {
                   <span
                     className={`text-sm px-2 py-1 rounded ${faceitTierClass(player.skillLevel)}`}
                   >
-                    Level {player.skillLevel ?? "?"}
+                    {t("common.level")} {player.skillLevel ?? "?"}
                   </span>
                 </div>
               ))}
@@ -808,12 +820,12 @@ export default function TournamentDetails() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-xs uppercase tracking-widest text-yellow-500">
-                  Match scoreboard
+                  {t("tournament.scoreboard")}
                 </p>
                 <h2 className="text-2xl font-bold">
                   {getTeam(selectedMatch.team1Id)?.name ||
                     selectedMatch.team1Id}{" "}
-                  <span className="text-neutral-600">vs</span>{" "}
+                  <span className="text-neutral-600">{t("common.vs")}</span>{" "}
                   {getTeam(selectedMatch.team2Id)?.name ||
                     selectedMatch.team2Id}
                 </h2>
@@ -821,19 +833,21 @@ export default function TournamentDetails() {
               <button
                 type="button"
                 onClick={() => setSelectedMatch(null)}
-                aria-label="Close scoreboard"
+                aria-label={t("tournament.close_scoreboard")}
                 className="text-neutral-400 hover:text-white"
               >
                 <X />
               </button>
             </div>
             {statsLoading && (
-              <p className="text-neutral-400">Loading scoreboard...</p>
+              <p className="text-neutral-400">
+                {t("tournament.scoreboard_loading")}
+              </p>
             )}
             {statsError && <p className="text-red-300">{statsError}</p>}
             {!statsLoading && !statsError && scoreRows.length === 0 && (
               <p className="text-neutral-400">
-                No detailed scoreboard data is available yet.
+                {t("tournament.scoreboard_empty")}
               </p>
             )}
             {scoreRows.length > 0 && scoreboardTeams.length >= 2 && (

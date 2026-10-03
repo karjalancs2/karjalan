@@ -2,12 +2,14 @@ import { FormEvent, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { isAdminUser, useAuth } from "../contexts/AuthContext";
+import { useTranslation } from "../contexts/TranslationContext";
 import { api } from "../lib/api";
 import { apiFetch } from "../lib/http";
 import { Tournament } from "../types";
 
 export default function AdminTournaments() {
   const { user, loading } = useAuth();
+  const { t } = useTranslation();
   const [faceitTournament, setFaceitTournament] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +26,21 @@ export default function AdminTournaments() {
   if (loading) return null;
   if (!isAdminUser(user)) return <Navigate to="/" replace />;
 
+  const getStatusLabel = (status: string) => {
+    const normalized = status.toLowerCase();
+    if (["join", "registration"].includes(normalized)) {
+      return t("status.registration_open");
+    }
+    if (["started", "live"].includes(normalized)) {
+      return t("status.started");
+    }
+    if (normalized === "finished") return t("status.finished");
+    if (normalized === "cancelled") return t("status.cancelled");
+    if (["upcoming", "scheduled"].includes(normalized)) {
+      return t("tournaments.filter.upcoming");
+    }
+    return status;
+  };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setMessage(null);
@@ -32,16 +49,14 @@ export default function AdminTournaments() {
     try {
       const result = await api.importFaceitTournament(faceitTournament);
       setMessage(
-        `${result.tournament.name} is now the active tournament.`,
+        t("admin.import_success").replace("{name}", result.tournament.name),
       );
     } catch (submitError) {
       const submitStatus = (submitError as { status?: number }).status;
       setError(
         submitStatus === 404
-          ? "Tournament not found. Please ensure it is a valid FACEIT Tournament ID."
-          : submitError instanceof Error
-            ? submitError.message
-            : "FACEIT tournament import failed.",
+          ? t("admin.tournament_not_found")
+          : t("admin.import_failed"),
       );
     } finally {
       setSubmitting(false);
@@ -50,7 +65,7 @@ export default function AdminTournaments() {
 
   const deleteTournament = async (tournament: Tournament) => {
     const confirmed = window.confirm(
-      `Delete "${tournament.name}"? This will also remove its matches and player stats.`,
+      t("admin.confirm_delete").replace("{name}", tournament.name),
     );
     if (!confirmed) return;
 
@@ -62,13 +77,9 @@ export default function AdminTournaments() {
       setTournaments((current) =>
         current.filter((item) => item.id !== tournament.id),
       );
-      setMessage(`Deleted ${tournament.name}.`);
-    } catch (clearError) {
-      setError(
-        clearError instanceof Error
-          ? clearError.message
-          : "Failed to delete tournament.",
-      );
+      setMessage(t("admin.delete_success").replace("{name}", tournament.name));
+    } catch {
+      setError(t("admin.delete_failed"));
     } finally {
       setDeletingId(null);
     }
@@ -85,18 +96,17 @@ export default function AdminTournaments() {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(result.error || "Elo recalculation failed.");
+        throw new Error(result.error || t("admin.elo_failed"));
       }
 
       setMessage(
-        `Historical Elo recalculated. ${result.matchesProcessed ?? 0} matches processed.`,
+        t("admin.elo_success").replace(
+          "{count}",
+          String(result.matchesProcessed ?? 0),
+        ),
       );
-    } catch (recalculateError) {
-      setError(
-        recalculateError instanceof Error
-          ? recalculateError.message
-          : "Historical Elo recalculation failed.",
-      );
+    } catch {
+      setError(t("admin.elo_failed"));
     } finally {
       setRecalculating(false);
     }
@@ -111,18 +121,17 @@ export default function AdminTournaments() {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(result.error || "Player stats sync failed.");
+        throw new Error(result.error || t("admin.stats_failed"));
       }
 
       alert(
-        `Player stats synced from FACEIT and saved to the database! (${result.statsSaved ?? 0} stats saved)`,
+        t("admin.stats_success").replace(
+          "{count}",
+          String(result.statsSaved ?? 0),
+        ),
       );
-    } catch (syncError) {
-      alert(
-        syncError instanceof Error
-          ? syncError.message
-          : "Player stats synchronization failed.",
-      );
+    } catch {
+      alert(t("admin.stats_failed"));
     } finally {
       setSyncing(false);
     }
@@ -133,14 +142,14 @@ export default function AdminTournaments() {
       <div className="flex items-center gap-3 mb-3">
         <ShieldCheck className="w-6 h-6 text-emerald-400" />
         <p className="text-xs uppercase tracking-widest text-neutral-500">
-          Admin
+          {t("nav.admin")}
         </p>
       </div>
       <h1 className="text-3xl sm:text-4xl font-extrabold uppercase tracking-tight mb-3 break-words">
-        Tournament dashboard
+        {t("admin.dashboard")}
       </h1>
       <p className="text-neutral-400 mb-8">
-        Set a FACEIT tournament as the active tournament shown on the homepage.
+        {t("admin.dashboard_description")}
       </p>
 
       <form
@@ -148,7 +157,7 @@ export default function AdminTournaments() {
         className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 sm:p-6 space-y-5"
       >
         <label className="block text-sm font-bold" htmlFor="faceit-tournament">
-          FACEIT tournament ID or URL
+          {t("admin.faceit_id_label")}
         </label>
         <input
           id="faceit-tournament"
@@ -166,9 +175,7 @@ export default function AdminTournaments() {
           <RefreshCw
             className={`w-4 h-4 ${submitting ? "animate-spin" : ""}`}
           />
-          {submitting
-            ? "Importing..."
-            : "Import FACEIT tournament"}
+          {submitting ? t("admin.importing") : t("admin.import_tournament")}
         </button>
         <button
           type="button"
@@ -179,7 +186,9 @@ export default function AdminTournaments() {
           <RefreshCw
             className={`w-4 h-4 ${recalculating ? "animate-spin" : ""}`}
           />
-          {recalculating ? "Recalculating..." : "Recalculate Historical Elo"}
+          {recalculating
+            ? t("admin.recalculating")
+            : t("admin.recalculate_elo")}
         </button>
         <button
           type="button"
@@ -188,7 +197,7 @@ export default function AdminTournaments() {
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-400 text-black font-bold px-5 py-3 rounded-sm hover:bg-emerald-300 disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing..." : "Sync Player Stats"}
+          {syncing ? t("admin.syncing") : t("admin.sync_player_stats")}
         </button>
         {message && <p className="text-emerald-400 text-sm">{message}</p>}
         {error && <p className="text-red-300 text-sm">{error}</p>}
@@ -197,18 +206,22 @@ export default function AdminTournaments() {
       <section className="mt-8 bg-neutral-900 border border-neutral-800 rounded-lg p-5 sm:p-6">
         <div className="flex items-center justify-between gap-4 mb-5">
           <div>
-            <h2 className="text-xl font-bold">Manage tournaments</h2>
+            <h2 className="text-xl font-bold">
+              {t("admin.manage_tournaments")}
+            </h2>
             <p className="text-sm text-neutral-500 mt-1">
-              Select a tournament to delete it and its related match data.
+              {t("admin.delete_description")}
             </p>
           </div>
           <span className="text-xs uppercase tracking-widest text-neutral-500">
-            {tournaments.length} total
+            {tournaments.length} {t("admin.total")}
           </span>
         </div>
         <div className="space-y-3">
           {tournaments.length === 0 ? (
-            <p className="text-sm text-neutral-500">No tournaments found.</p>
+            <p className="text-sm text-neutral-500">
+              {t("admin.no_tournaments")}
+            </p>
           ) : (
             tournaments.map((tournament) => (
               <div
@@ -218,17 +231,24 @@ export default function AdminTournaments() {
                 <div className="min-w-0">
                   <p className="font-bold truncate">{tournament.name}</p>
                   <p className="text-xs text-neutral-500 mt-1">
-                    {tournament.status} · {tournament.id}
+                    {getStatusLabel(tournament.status)} · {tournament.id}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => deleteTournament(tournament)}
-                  disabled={submitting || recalculating || syncing || Boolean(deletingId)}
+                  disabled={
+                    submitting ||
+                    recalculating ||
+                    syncing ||
+                    Boolean(deletingId)
+                  }
                   className="inline-flex items-center justify-center gap-2 border border-red-800 text-red-300 font-bold px-4 py-2 rounded-sm hover:bg-red-950 disabled:opacity-50"
                 >
                   <Trash2 className="w-4 h-4" />
-                  {deletingId === tournament.id ? "Deleting..." : "Delete"}
+                  {deletingId === tournament.id
+                    ? t("admin.deleting")
+                    : t("admin.delete")}
                 </button>
               </div>
             ))
