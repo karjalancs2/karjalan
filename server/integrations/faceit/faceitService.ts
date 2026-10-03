@@ -1036,18 +1036,19 @@ export class FaceitService {
         const playerStats = player?.player_stats || player?.stats || {};
         extractedStats.push({
           faceitPlayerId: String(player?.player_id || player?.id || ""),
-          kills: parseInt(
-            String(playerStats.Kills || playerStats.kills || 0),
-            10,
-          ) || 0,
-          deaths: parseInt(
-            String(playerStats.Deaths || playerStats.deaths || 0),
-            10,
-          ) || 0,
-          headshots: parseInt(
-            String(playerStats.Headshots || playerStats.headshots || 0),
-            10,
-          ) || 0,
+          kills:
+            parseInt(String(playerStats.Kills || playerStats.kills || 0), 10) ||
+            0,
+          deaths:
+            parseInt(
+              String(playerStats.Deaths || playerStats.deaths || 0),
+              10,
+            ) || 0,
+          headshots:
+            parseInt(
+              String(playerStats.Headshots || playerStats.headshots || 0),
+              10,
+            ) || 0,
         });
       }
     }

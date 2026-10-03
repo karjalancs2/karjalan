@@ -417,27 +417,23 @@ apiRouter.post(
   },
 );
 
-apiRouter.delete(
-  "/admin/tournaments/:id",
-  authMiddleware,
-  async (req, res) => {
-    const userId = (req as any).user.id;
-    if (!(await isAdmin(userId))) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
+apiRouter.delete("/admin/tournaments/:id", authMiddleware, async (req, res) => {
+  const userId = (req as any).user.id;
+  if (!(await isAdmin(userId))) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
 
-    try {
-      await prisma.tournament.delete({ where: { id: req.params.id } });
-      return res.json({ success: true, deleted: req.params.id });
-    } catch (error: any) {
-      if (error?.code === "P2025") {
-        return res.status(404).json({ error: "Tournament not found" });
-      }
-      console.error("Failed to delete tournament:", error);
-      return res.status(500).json({ error: "Failed to delete tournament" });
+  try {
+    await prisma.tournament.delete({ where: { id: req.params.id } });
+    return res.json({ success: true, deleted: req.params.id });
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ error: "Tournament not found" });
     }
-  },
-);
+    console.error("Failed to delete tournament:", error);
+    return res.status(500).json({ error: "Failed to delete tournament" });
+  }
+});
 
 apiRouter.get("/matches/live", async (_req, res) => {
   const matches = await prisma.match.findMany({ where: { status: "live" } });
@@ -1341,13 +1337,19 @@ apiRouter.post("/admin/recalculate-elo", authMiddleware, async (req, res) => {
     let processed = 0;
     for (const match of matches) {
       const team1IsBye =
-        !match.team1Id || match.team1?.name === "Bye" || match.team1?.name === "BYE";
+        !match.team1Id ||
+        match.team1?.name === "Bye" ||
+        match.team1?.name === "BYE";
       const team2IsBye =
-        !match.team2Id || match.team2?.name === "Bye" || match.team2?.name === "BYE";
+        !match.team2Id ||
+        match.team2?.name === "Bye" ||
+        match.team2?.name === "BYE";
 
       if (team1IsBye || team2IsBye) {
         const advancingTeamId = team1IsBye
-          ? team2IsBye ? null : match.team2Id
+          ? team2IsBye
+            ? null
+            : match.team2Id
           : match.team1Id;
 
         if (advancingTeamId) {
@@ -1360,9 +1362,7 @@ apiRouter.post("/admin/recalculate-elo", authMiddleware, async (req, res) => {
         continue;
       }
 
-      if (
-        match.team1Score === match.team2Score
-      ) {
+      if (match.team1Score === match.team2Score) {
         continue;
       }
 

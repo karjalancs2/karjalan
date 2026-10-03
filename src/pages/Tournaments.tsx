@@ -96,9 +96,7 @@ export default function Tournaments() {
               "cancelled",
             ].includes(tournament.status);
             const bracketSlots =
-              teamCount > 0
-                ? Math.pow(2, Math.ceil(Math.log2(teamCount)))
-                : 0;
+              teamCount > 0 ? Math.pow(2, Math.ceil(Math.log2(teamCount))) : 0;
             const regSlots =
               tournament.slots > teamCount ? tournament.slots : teamCount;
 

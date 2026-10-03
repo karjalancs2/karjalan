@@ -282,11 +282,9 @@ export default function TournamentDetails() {
     tournament.teams?.length ||
     tournament.teamsCount ||
     0;
-  const isStartedOrFinished = [
-    "started",
-    "finished",
-    "cancelled",
-  ].includes(tournament.status);
+  const isStartedOrFinished = ["started", "finished", "cancelled"].includes(
+    tournament.status,
+  );
   const bracketSlots =
     teamCount > 0 ? Math.pow(2, Math.ceil(Math.log2(teamCount))) : 0;
   const regSlots = tournament.slots > teamCount ? tournament.slots : teamCount;
@@ -318,8 +316,8 @@ export default function TournamentDetails() {
                   <span className="text-white">€{tournament.prizePool}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4" />{" "}
-                  {teamCount} / {isStartedOrFinished ? bracketSlots : regSlots}{" "}
+                  <Users className="w-4 h-4" /> {teamCount} /{" "}
+                  {isStartedOrFinished ? bracketSlots : regSlots}{" "}
                   {language === "fi" ? "joukkuetta" : "teams"}
                 </span>
               </div>
