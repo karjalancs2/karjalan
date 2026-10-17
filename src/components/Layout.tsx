@@ -18,7 +18,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </p>
           <div className="flex gap-4">
             <a
-              href="https://discord.gg/AnYwNXdt4"
+              href="https://discord.gg/29mjT4eqR"
               target="_blank"
               rel="noopener noreferrer"
               className="text-neutral-500 hover:text-white transition-colors text-sm"

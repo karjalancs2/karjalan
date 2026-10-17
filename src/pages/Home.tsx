@@ -464,7 +464,7 @@ export default function Home() {
             <p>{t("home.community_follow_scene")}</p>
           </div>
           <a
-            href="https://discord.gg/AnYwNXdt4"
+            href="https://discord.gg/29mjT4eqR"
             target="_blank"
             rel="noopener noreferrer"
             className="mt-4 bg-amber-400 hover:bg-amber-300 text-black font-bold px-8 py-4 rounded-sm transition-colors text-lg uppercase tracking-wide shadow-lg shadow-amber-950/30"
