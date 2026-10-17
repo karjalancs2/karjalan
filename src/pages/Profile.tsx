@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { useTranslation } from "../contexts/TranslationContext";
+import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
+import { apiUrl } from "../lib/http";
 import { User, Team } from "../types";
-import { Crosshair, Award, ImageOff } from "lucide-react";
+import { Crosshair, Award, ImageOff, Link2 } from "lucide-react";
 import { faceitTierClass, safeString } from "../lib/utils";
 
 export default function Profile() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { language } = useTranslation();
+  const { user: authUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
+  const [discordLinkError, setDiscordLinkError] = useState("");
 
   useEffect(() => {
     async function loadData() {
@@ -31,6 +36,9 @@ export default function Profile() {
         {language === "fi" ? "Ladataan..." : "Loading..."}
       </div>
     );
+
+  const isOwnProfile = authUser?.id === user.id;
+  const discordResult = new URLSearchParams(location.search).get("discord");
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col gap-6 sm:gap-8">
@@ -80,6 +88,57 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {isOwnProfile && (
+        <section className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="font-bold text-lg">Discord</h2>
+            <p className="text-sm text-neutral-400 mt-1">
+              {authUser.discordId
+                ? language === "fi"
+                  ? "Discord-tili on yhdistetty ja Pelaaja-rooli myönnetty."
+                  : "Discord is linked and the Player role has been assigned."
+                : language === "fi"
+                  ? "Yhdistä Discord-tilisi saadaksesi Pelaaja-roolin palvelimella."
+                  : "Link your Discord account to receive the Player role in the server."}
+            </p>
+            {discordResult === "error" && (
+              <p className="text-sm text-red-400 mt-2">
+                {language === "fi"
+                  ? "Discord-tilin yhdistäminen epäonnistui. Yritä uudelleen tai ota yhteyttä ylläpitoon."
+                  : "Discord linking failed. Try again or contact an administrator."}
+              </p>
+            )}
+            {discordLinkError && (
+              <p className="text-sm text-red-400 mt-2">{discordLinkError}</p>
+            )}
+          </div>
+          {authUser.discordId ? (
+            <span className="text-sm text-green-400 font-semibold">
+              {language === "fi" ? "Yhdistetty" : "Linked"}
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  window.location.assign(apiUrl("/api/discord/login"));
+                } catch (error) {
+                  setDiscordLinkError(
+                    error instanceof Error
+                      ? error.message
+                      : "Could not start Discord linking.",
+                  );
+                }
+              }}
+              className="inline-flex items-center justify-center gap-2 bg-[#5865F2] text-white font-bold px-5 py-3 rounded-sm hover:bg-[#4752C4] transition-colors"
+            >
+              <Link2 className="w-4 h-4" />
+              {language === "fi" ? "Yhdistä Discord" : "Link Discord"}
+            </button>
+          )}
+        </section>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1 flex flex-col gap-6">

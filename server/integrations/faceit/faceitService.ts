@@ -1,5 +1,6 @@
 ﻿import { prisma } from "../../database/prisma";
 import { rankingService } from "../../services/rankingService";
+import { announceTournamentFinished } from "../discord/discordService";
 
 type FaceitError = Error & {
   status?: number;
@@ -170,6 +171,8 @@ export function normalizeFaceitMatch(
     match?.group_name ||
     match?.round_name ||
     (match?.round != null ? `Round ${match.round}` : "Unassigned");
+  const rawStatus =
+    typeof match?.status === "string" ? match.status.toLowerCase() : "upcoming";
 
   return {
     faceitId,
@@ -184,7 +187,9 @@ export function normalizeFaceitMatch(
     round: roundNumber,
     bracketPosition,
     roundLabel: typeof stage === "string" ? stage : "Unassigned",
-    status: typeof match?.status === "string" ? match.status : "upcoming",
+    status: ["finished", "completed"].includes(rawStatus)
+      ? "completed"
+      : rawStatus,
     scheduledTime:
       parsedScheduledTime && !Number.isNaN(parsedScheduledTime.getTime())
         ? parsedScheduledTime
@@ -455,6 +460,7 @@ export class FaceitService {
     const computedBrackets = groupMatchesByStage(matches, stages);
     const brackets = Array.isArray(computedBrackets) ? computedBrackets : [];
 
+    let created = false;
     try {
       const tournament = await prisma.$transaction(
         async (tx) => {
@@ -532,6 +538,7 @@ export class FaceitService {
           const saved = existing
             ? await tx.tournament.update({ where: { id: existing.id }, data })
             : await tx.tournament.create({ data });
+          created = !existing;
 
           const subscriptionTeams = (
             Array.isArray(rawSubscriptions) ? rawSubscriptions : []
@@ -878,6 +885,7 @@ export class FaceitService {
         tournament,
         brackets,
         matches,
+        created,
       };
     } catch (error) {
       logFaceitError("FACEIT tournament database import failed", error);
@@ -1124,6 +1132,130 @@ export class FaceitService {
           team2Score,
         );
         await this.syncMatchStatsToDatabase(match.id);
+
+        const matchStatuses = await prisma.match.findMany({
+          where: { tournamentId: match.tournamentId },
+          select: { status: true },
+        });
+        if (
+          matchStatuses.some(
+            ({ status }) => !["completed", "finished"].includes(status.toLowerCase()),
+          )
+        ) {
+          return { success: true };
+        }
+
+        const tournament = await prisma.tournament.findUnique({
+          where: { id: match.tournamentId },
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            date: true,
+            prizePool: true,
+          },
+        });
+        if (!tournament || tournament.status.toLowerCase() === "finished") {
+          return { success: true };
+        }
+
+        const finalized = await prisma.tournament.updateMany({
+          where: { id: tournament.id, status: { not: "finished" } },
+          data: { status: "finished", isActive: false },
+        });
+        if (finalized.count === 0) return { success: true };
+
+        const results = await prisma.tournament.findUnique({
+          where: { id: tournament.id },
+          include: {
+            matches: {
+              include: {
+                team1: { select: { id: true, name: true } },
+                team2: { select: { id: true, name: true } },
+              },
+            },
+            teams: {
+              include: {
+                players: {
+                  include: {
+                    playerStats: {
+                      where: { match: { tournamentId: tournament.id } },
+                      select: { kills: true, deaths: true, assists: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+        if (!results) return { success: true };
+
+        const teamResults = results.teams.map((team) => {
+          let wins = 0;
+          let losses = 0;
+          for (const finishedMatch of results.matches) {
+            if (
+              finishedMatch.team1Id !== team.id &&
+              finishedMatch.team2Id !== team.id
+            ) {
+              continue;
+            }
+            if (finishedMatch.team1Score === finishedMatch.team2Score) continue;
+            const teamWon =
+              finishedMatch.team1Id === team.id
+                ? finishedMatch.team1Score > finishedMatch.team2Score
+                : finishedMatch.team2Score > finishedMatch.team1Score;
+            if (teamWon) wins += 1;
+            else losses += 1;
+          }
+          return {
+            name: team.name,
+            wins,
+            losses,
+            rankingPoints: team.rankingPoints,
+          };
+        }).sort(
+          (a, b) =>
+            b.wins - a.wins ||
+            b.rankingPoints - a.rankingPoints ||
+            a.name.localeCompare(b.name),
+        );
+        const playerResults = results.teams
+          .flatMap((team) =>
+            team.players.map((player) => {
+              const totals = player.playerStats.reduce(
+                (sum, stat) => ({
+                  kills: sum.kills + stat.kills,
+                  deaths: sum.deaths + stat.deaths,
+                  assists: sum.assists + stat.assists,
+                }),
+                { kills: 0, deaths: 0, assists: 0 },
+              );
+              return {
+                nickname: player.nickname,
+                teamName: team.name,
+                ...totals,
+              };
+            }),
+          )
+          .filter(
+            (player) =>
+              player.kills > 0 || player.deaths > 0 || player.assists > 0,
+          )
+          .sort(
+            (a, b) =>
+              b.kills - a.kills ||
+              a.deaths - b.deaths ||
+              a.nickname.localeCompare(b.nickname),
+          );
+
+        void announceTournamentFinished({
+          tournament,
+          teams: teamResults,
+          players: playerResults,
+        }).catch((error) => {
+          console.error("Failed to announce tournament results to Discord:", error);
+        });
       } catch (err) {
         console.error("Failed to process match finish webhook:", err);
       }

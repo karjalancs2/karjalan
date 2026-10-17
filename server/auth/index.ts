@@ -146,6 +146,7 @@ authRouter.get("/me", authMiddleware, async (req, res) => {
         faceitLevel: true,
         faceitUsername: true,
         inGameRole: true,
+        discordId: true,
       },
     });
     if (!user) return res.status(404).json({ error: "User not found" });

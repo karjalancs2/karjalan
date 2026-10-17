@@ -23,6 +23,7 @@ model User {
   faceitAvatar    String?
   faceitElo       Int?
   faceitVerifiedAt DateTime?
+  discordId       String?      @unique
   inGameRole      String?
   
   teamsCaptained  Team[]       @relation("TeamCaptain")

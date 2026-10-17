@@ -10,13 +10,22 @@ Set these as secrets on the backend service:
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/karjalan?schema=public
 JWT_SECRET=<at least 32 random characters>
 FACEIT_API_KEY=<server-side FACEIT API key>
-FACEIT_WEBHOOK_SECRET=<FACEIT webhook secret, if webhooks are enabled>
+DISCORD_CLIENT_ID=<Discord application client ID>
+DISCORD_CLIENT_SECRET=<Discord application client secret>
+DISCORD_REDIRECT_URI=https://<your-render-service>.onrender.com/api/discord/callback
+DISCORD_BOT_TOKEN=<server-side Discord bot token>
+DISCORD_GUILD_ID=<Karjalan Discord server ID>
+DISCORD_PLAYER_ROLE_ID=<Player role ID>
+DISCORD_TOURNAMENT_WEBHOOK_URL=<webhook URL for #turnaus-chat>
+FRONTEND_URL=https://karjalan.net
 CORS_ORIGIN=https://karjalan.net
 NODE_ENV=production
 PORT=<provided by the hosting service, usually 10000 or $PORT>
 ```
 
-`FACEIT_API_KEY`, `JWT_SECRET`, and `DATABASE_URL` must never be exposed as `VITE_` variables or committed to the repository. `CORS_ORIGIN` accepts comma-separated origins when more than one frontend domain is required.
+`FACEIT_API_KEY`, `JWT_SECRET`, `DATABASE_URL`, Discord client secret, bot token, and webhook URL must never be exposed as `VITE_` variables or committed to the repository. `CORS_ORIGIN` accepts comma-separated origins when more than one frontend domain is required.
+
+Create a Discord application and bot, enable the bot's **Manage Roles** permission, and move its highest role above the Player role. Add `DISCORD_REDIRECT_URI` exactly to the Discord application's OAuth2 redirect URI list. The OAuth flow requests `identify` and `guilds.join`; the bot must be a member of `DISCORD_GUILD_ID`. Create a Discord webhook in `#turnaus-chat` and set its URL as `DISCORD_TOURNAMENT_WEBHOOK_URL`.
 
 ## PostgreSQL setup
 
@@ -74,6 +83,8 @@ Start command: npm run server
 ```
 
 `npm run build:server` bundles only the Express server; `npm run build:client` builds only the Vite frontend. `npm run build` prepares Prisma and builds both artifacts.
+
+Before deploying the backend, add the nullable `User.discordId` column and unique index to the production database. This repository has no committed Prisma migration history, so apply the additive schema change against the configured production `DATABASE_URL` with `npx prisma db push`; do not run it with `--accept-data-loss` or `--force-reset`. Once a migration baseline is established, prefer committed migrations for future production schema changes.
 
 ## Verification
 

@@ -13,6 +13,7 @@ export interface User {
   email: string;
   role: string;
   country?: string;
+  discordId?: string | null;
   faceit_level?: number;
   faceit_username?: string;
   in_game_role?: string;

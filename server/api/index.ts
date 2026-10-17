@@ -4,6 +4,8 @@ import { authRouter, authMiddleware } from "../auth";
 import { faceitService } from "../integrations/faceit/faceitService";
 import { sanitizePlainText } from "../lib/sanitize";
 import { rankingService } from "../services/rankingService";
+import { discordRouter } from "../discord";
+import { announceTournamentCreated } from "../integrations/discord/discordService";
 
 export const apiRouter = Router();
 
@@ -98,6 +100,7 @@ function isLobbyMember(
 }
 
 apiRouter.use("/auth", authRouter);
+apiRouter.use("/discord", discordRouter);
 
 apiRouter.get("/users/:id", async (req, res) => {
   try {
@@ -398,6 +401,17 @@ apiRouter.post(
 
     try {
       const imported = await faceitService.importTournament(input);
+      if (imported.created) {
+        void announceTournamentCreated({
+          id: imported.tournament.id,
+          name: imported.tournament.name,
+          status: imported.tournament.status,
+          date: imported.tournament.date,
+          prizePool: imported.tournament.prizePool,
+        }).catch((error) => {
+          console.error("Failed to announce imported tournament to Discord:", error);
+        });
+      }
       return res.json({
         ...imported,
         brackets: Array.isArray(imported.brackets) ? imported.brackets : [],

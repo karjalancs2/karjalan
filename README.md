@@ -22,10 +22,7 @@ This project is specifically designed to be easily exported from Google AI Studi
    npm install
    ```
 3. **Set up Environment Variables:**
-   Copy `.env.example` to `.env` and configure your local settings.
-   ```bash
-   cp .env.example .env
-   ```
+   Create a private `.env` file in the repository root and add the settings required for your setup, such as `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, and any FACEIT or Discord integration credentials. Keep this file out of version control.
 4. **Initialize the Database:**
    ```bash
    npx prisma generate
