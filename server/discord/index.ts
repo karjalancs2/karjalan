@@ -21,6 +21,24 @@ function requiredEnv(name: string) {
   return value;
 }
 
+function getDiscordRedirectUri() {
+  const redirectUri = requiredEnv("DISCORD_REDIRECT_URI");
+  const parsedUri = new URL(redirectUri);
+  if (
+    parsedUri.pathname !== "/api/discord/callback" ||
+    parsedUri.search ||
+    parsedUri.hash
+  ) {
+    throw new Error(
+      "DISCORD_REDIRECT_URI must be the exact /api/discord/callback URL",
+    );
+  }
+  if (process.env.NODE_ENV === "production" && parsedUri.protocol !== "https:") {
+    throw new Error("DISCORD_REDIRECT_URI must use HTTPS in production");
+  }
+  return redirectUri;
+}
+
 function getJwtSecret() {
   const secret = requiredEnv("JWT_SECRET");
   if (secret.length < 32) {
@@ -50,6 +68,10 @@ discordRouter.get("/login", authMiddleware, async (req, res) => {
   const userId = authUserId(req);
   try {
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const jwtSecret = getJwtSecret();
+    const clientId = requiredEnv("DISCORD_CLIENT_ID");
+    const redirectUri = getDiscordRedirectUri();
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { discordId: true },
@@ -61,22 +83,23 @@ discordRouter.get("/login", authMiddleware, async (req, res) => {
 
     const state = jwt.sign(
       { userId, nonce: randomUUID() },
-      getJwtSecret(),
+      jwtSecret,
       { expiresIn: "10m" },
     );
     res.cookie(oauthStateCookie, state, oauthStateCookieOptions);
 
     const authorizationUrl = new URL("https://discord.com/oauth2/authorize");
     authorizationUrl.search = new URLSearchParams({
-      client_id: requiredEnv("DISCORD_CLIENT_ID"),
-      redirect_uri: requiredEnv("DISCORD_REDIRECT_URI"),
+      client_id: clientId,
+      redirect_uri: redirectUri,
       response_type: "code",
       scope: "identify guilds.join",
       state,
     }).toString();
+    console.info("[Discord OAuth] Using redirect_uri:", redirectUri);
     return res.redirect(authorizationUrl.toString());
   } catch (error) {
-    console.error("Failed to start Discord OAuth:", error);
+    console.error("Discord OAuth Init Error:", error);
     return res.status(500).json({ error: "Failed to start Discord linking" });
   }
 });
@@ -108,7 +131,7 @@ discordRouter.get("/callback", async (req, res) => {
 
     const clientId = requiredEnv("DISCORD_CLIENT_ID");
     const clientSecret = requiredEnv("DISCORD_CLIENT_SECRET");
-    const redirectUri = requiredEnv("DISCORD_REDIRECT_URI");
+    const redirectUri = getDiscordRedirectUri();
     const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
