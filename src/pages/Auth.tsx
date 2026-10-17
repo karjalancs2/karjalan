@@ -41,8 +41,16 @@ export default function Auth() {
 
       login(data.user);
       navigate("/");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      console.error("Authentication request failed", {
+        endpoint,
+        error: err,
+      });
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Autentikointipyynnön lähettäminen epäonnistui",
+      );
     }
   };
 

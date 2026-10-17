@@ -86,6 +86,12 @@ authRouter.post("/register", authRateLimiter, async (req, res) => {
         .status(400)
         .json({ error: "Username or email already exists" });
     }
+    console.error("Registration request failed:", {
+      method: req.method,
+      path: req.originalUrl,
+      origin: req.get("origin"),
+      error,
+    });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -116,7 +122,12 @@ authRouter.post("/login", authRateLimiter, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Login request failed:", {
+      method: req.method,
+      path: req.originalUrl,
+      origin: req.get("origin"),
+      error,
+    });
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -141,6 +152,11 @@ authRouter.get("/me", authMiddleware, async (req, res) => {
 
     res.json({ user });
   } catch (error) {
+    console.error("Auth user lookup failed:", {
+      method: req.method,
+      path: req.originalUrl,
+      error,
+    });
     res.status(500).json({ error: "Internal server error" });
   }
 });

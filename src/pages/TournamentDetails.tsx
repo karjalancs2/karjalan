@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "../contexts/TranslationContext";
+import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
 import { Tournament, Match, Team, Player } from "../types";
 import { Trophy, Users, Calendar, Info, Clock, Shield, X } from "lucide-react";
@@ -11,6 +12,7 @@ import { faceitTierClass, safeString } from "../lib/utils";
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
   const { language, t } = useTranslation();
+  const { user } = useAuth();
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -331,9 +333,18 @@ export default function TournamentDetails() {
 
           {isRegistrationOpen && (
             <div className="w-full md:w-auto">
-              <button className="w-full md:w-auto bg-white text-black font-bold px-8 py-3 rounded-sm hover:bg-neutral-200 transition-colors">
-                {t("tournament.register")}
-              </button>
+              {user ? (
+                <button className="w-full md:w-auto bg-white text-black font-bold px-8 py-3 rounded-sm hover:bg-neutral-200 transition-colors">
+                  {t("tournament.join")}
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  className="inline-flex w-full md:w-auto items-center justify-center bg-white text-black font-bold px-8 py-3 rounded-sm hover:bg-neutral-200 transition-colors"
+                >
+                  {t("tournament.login_to_join")}
+                </Link>
+              )}
             </div>
           )}
         </div>

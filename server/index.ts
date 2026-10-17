@@ -27,24 +27,24 @@ async function startServer() {
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
-  const allowedOrigins =
+  const developmentOrigins =
     process.env.NODE_ENV === "production"
-      ? configuredOrigins
-      : [
-          ...new Set([
-            ...configuredOrigins,
-            "http://localhost:5173",
-            "http://localhost:3000",
-          ]),
-        ];
+      ? []
+      : ["http://localhost:5173", "http://localhost:3000"];
+  const allowedOrigins = new Set([
+    "https://karjalan.net",
+    ...developmentOrigins,
+    ...configuredOrigins,
+  ]);
 
   app.use(
     cors({
       credentials: true,
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.has(origin)) {
           return callback(null, true);
         }
+        console.warn("CORS request rejected", { origin });
         return callback(new Error("Origin is not allowed by CORS"));
       },
     }),

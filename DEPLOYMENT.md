@@ -11,7 +11,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/karjalan?schema=public
 JWT_SECRET=<at least 32 random characters>
 FACEIT_API_KEY=<server-side FACEIT API key>
 FACEIT_WEBHOOK_SECRET=<FACEIT webhook secret, if webhooks are enabled>
-CORS_ORIGIN=https://<your-cloudflare-frontend-domain>
+CORS_ORIGIN=https://karjalan.net
 NODE_ENV=production
 PORT=<provided by the hosting service, usually 10000 or $PORT>
 ```
@@ -46,13 +46,13 @@ Do not run `prisma db push --force-reset` against a production database.
 
 ## Cloudflare frontend variables
 
-Set this build-time variable in Cloudflare:
+Set this required build-time variable in Cloudflare to the public Render service URL:
 
 ```text
-VITE_API_BASE_URL=https://<your-render-or-railway-backend-domain>
+VITE_API_BASE_URL=https://<your-render-service>.onrender.com
 ```
 
-The frontend routes all API requests through this value. Keep the value without a trailing slash. For local same-origin development, leave it empty and the frontend uses relative `/api/...` paths.
+The frontend routes all production API requests through this value; a production build without it fails API calls with an explicit configuration error instead of silently using relative `/api/...` paths. Keep the value without a trailing slash. Local development may leave it empty to use the Vite/Express same-origin proxy.
 
 Cloudflare build settings:
 
@@ -62,7 +62,18 @@ Output directory: dist
 Production branch: main
 ```
 
-If the frontend and backend use different domains, the backend must use the exact Cloudflare origin in `CORS_ORIGIN`, and production auth cookies require HTTPS. Deploy the backend first, then set its URL as `VITE_API_BASE_URL` in Cloudflare and redeploy the frontend.
+The backend explicitly allows `https://karjalan.net` and, outside production, `http://localhost:5173` and `http://localhost:3000`. Additional origins can be added with comma-separated `CORS_ORIGIN` values. Production auth cookies require HTTPS. Deploy the backend first, then set its URL as `VITE_API_BASE_URL` in Cloudflare and redeploy the frontend.
+
+## Render service commands
+
+Use the following commands for the Render Node web service:
+
+```text
+Build command: npm ci && npm run build
+Start command: npm run server
+```
+
+`npm run build:server` bundles only the Express server; `npm run build:client` builds only the Vite frontend. `npm run build` prepares Prisma and builds both artifacts.
 
 ## Verification
 

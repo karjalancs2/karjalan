@@ -168,7 +168,9 @@ export default function Tournaments() {
                   </div>
                   <button className="w-full md:w-auto bg-white text-black font-bold px-6 py-3 rounded-sm hover:bg-neutral-200 transition-colors whitespace-nowrap">
                     {tournamentStatus === "registration"
-                      ? t("btn.register")
+                      ? user
+                        ? t("tournament.join")
+                        : t("tournament.login_to_join")
                       : language === "fi"
                         ? "Katso tiedot"
                         : "View details"}
