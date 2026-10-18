@@ -33,28 +33,73 @@ type TournamentResults = {
   }>;
 };
 
+async function postTournamentEmbed(
+  webhookUrl: string,
+  embed: DiscordEmbed,
+  threadName?: string,
+) {
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      allowed_mentions: { parse: [] },
+      ...(threadName ? { thread_name: threadName } : {}),
+      embeds: [embed],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Discord webhook returned ${response.status}`);
+  }
+}
+
 async function sendTournamentEmbed(embed: DiscordEmbed) {
-  const webhookUrl = process.env.DISCORD_TOURNAMENT_WEBHOOK_URL;
-  if (!webhookUrl) {
+  const channelWebhookUrl = process.env.DISCORD_TOURNAMENT_WEBHOOK_URL;
+  const forumWebhookUrl =
+    process.env.DISCORD_TOURNAMENT_ANNOUNCEMENT_WEBHOOK_URL;
+  const legacyWebhookUrl = process.env.DISCORD_ANNOUNCEMENTS_WEBHOOK_URL;
+  const standardWebhookUrl = channelWebhookUrl || legacyWebhookUrl;
+
+  if (!standardWebhookUrl && !forumWebhookUrl) {
     console.warn(
       "Discord tournament notification skipped: DISCORD_TOURNAMENT_WEBHOOK_URL is not configured",
     );
     return;
   }
 
-  const response = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      allowed_mentions: { parse: [] },
-      embeds: [embed],
-    }),
+  const deliveries: Array<{ name: string; promise: Promise<void> }> = [];
+  if (standardWebhookUrl) {
+    deliveries.push({
+      name: "standard channel",
+      promise: postTournamentEmbed(standardWebhookUrl, embed),
+    });
+  }
+  if (forumWebhookUrl) {
+    deliveries.push({
+      name: "forum channel",
+      promise: postTournamentEmbed(
+        forumWebhookUrl,
+        embed,
+        embed.title,
+      ),
+    });
+  }
+
+  const results = await Promise.allSettled(
+    deliveries.map(({ promise }) => promise),
+  );
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      console.error(
+        `Failed to send tournament announcement to Discord ${deliveries[index].name}:`,
+        result.reason,
+      );
+    }
   });
 
-  if (!response.ok) {
-    const responseBody = await response.text();
-    throw new Error(
-      `Discord webhook returned ${response.status}: ${responseBody}`,
+  if (!channelWebhookUrl && legacyWebhookUrl) {
+    console.warn(
+      "Using deprecated DISCORD_ANNOUNCEMENTS_WEBHOOK_URL for the standard channel",
     );
   }
 }
@@ -62,8 +107,13 @@ async function sendTournamentEmbed(embed: DiscordEmbed) {
 export async function announceTournamentCreated(
   tournament: TournamentAnnouncement,
 ) {
+  const startDate =
+    tournament.date && !Number.isNaN(tournament.date.getTime())
+      ? `<t:${Math.floor(tournament.date.getTime() / 1000)}:F>`
+      : "To be announced";
+
   await sendTournamentEmbed({
-    title: `New tournament: ${tournament.name}`,
+    title: tournament.name,
     url: `https://karjalan.net/tournaments/${encodeURIComponent(tournament.id)}`,
     description: "Registration and tournament details are available on Karjalan.",
     color: 0xf0a500,
@@ -76,9 +126,7 @@ export async function announceTournamentCreated(
       },
       {
         name: "Starts",
-        value: tournament.date
-          ? tournament.date.toLocaleDateString("en-GB", { timeZone: "UTC" })
-          : "To be announced",
+        value: startDate,
         inline: true,
       },
     ],

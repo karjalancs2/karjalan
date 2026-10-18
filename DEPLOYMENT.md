@@ -16,7 +16,8 @@ DISCORD_REDIRECT_URI=https://<your-render-service>.onrender.com/api/discord/call
 DISCORD_BOT_TOKEN=<server-side Discord bot token>
 DISCORD_GUILD_ID=<Karjalan Discord server ID>
 DISCORD_PLAYER_ROLE_ID=<Player role ID>
-DISCORD_TOURNAMENT_WEBHOOK_URL=<webhook URL for #turnaus-chat>
+DISCORD_TOURNAMENT_WEBHOOK_URL=<webhook URL for #imoitukset>
+DISCORD_TOURNAMENT_ANNOUNCEMENT_WEBHOOK_URL=<webhook URL for tournament forum>
 FRONTEND_URL=https://karjalan.net
 CORS_ORIGIN=https://karjalan.net
 NODE_ENV=production
@@ -25,7 +26,7 @@ PORT=<provided by the hosting service, usually 10000 or $PORT>
 
 `FACEIT_API_KEY`, `JWT_SECRET`, `DATABASE_URL`, Discord client secret, bot token, and webhook URL must never be exposed as `VITE_` variables or committed to the repository. `CORS_ORIGIN` accepts comma-separated origins when more than one frontend domain is required.
 
-Create a Discord application and bot, enable the bot's **Manage Roles** permission, and move its highest role above the Player role. Add `DISCORD_REDIRECT_URI` exactly to the Discord application's OAuth2 redirect URI list. The OAuth flow requests `identify` and `guilds.join`; the bot must be a member of `DISCORD_GUILD_ID`. Create a Discord webhook in `#turnaus-chat` and set its URL as `DISCORD_TOURNAMENT_WEBHOOK_URL`.
+Create a Discord application and bot, enable the bot's **Manage Roles** permission, and move its highest role above the Player role. Add `DISCORD_REDIRECT_URI` exactly to the Discord application's OAuth2 redirect URI list. The OAuth flow requests `identify` and `guilds.join`; the bot must be a member of `DISCORD_GUILD_ID`. In the Karjalan server, create a text channel named `#imoitukset`. In its permissions, allow `@everyone` to view the channel and read message history, and deny `Send Messages`; remove any role-specific `Send Messages` allows for members who should not post. Administrators can still post because Discord's Administrator permission bypasses channel overwrites. Create a webhook in `#imoitukset` and set its URL as the backend-only `DISCORD_TOURNAMENT_WEBHOOK_URL` secret. Create a second webhook targeting a Discord Forum channel and set it as `DISCORD_TOURNAMENT_ANNOUNCEMENT_WEBHOOK_URL`; the site creates a forum post named after the tournament and publishes the same embed to both destinations. Both requests run independently, so a failure to one does not prevent the other.
 
 ## PostgreSQL setup
 
