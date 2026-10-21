@@ -85,6 +85,12 @@ export function Navbar() {
                 {t("nav.home")}
               </Link>
               <Link
+                to="/meista"
+                className="text-sm font-medium text-neutral-300 hover:text-white transition-colors"
+              >
+                {t("nav.about")}
+              </Link>
+              <Link
                 to="/tournaments"
                 className="text-sm font-medium text-neutral-300 hover:text-white transition-colors"
               >
@@ -116,12 +122,6 @@ export function Navbar() {
                 className="text-sm font-medium text-neutral-300 hover:text-white transition-colors"
               >
                 {t("nav.watch")}
-              </Link>
-              <Link
-                to="/meista"
-                className="text-sm font-medium text-neutral-300 hover:text-white transition-colors"
-              >
-                {t("nav.about")}
               </Link>
             </div>
           </div>
@@ -212,12 +212,12 @@ export function Navbar() {
             <div className="flex flex-col gap-1">
               {[
                 ["/", t("nav.home")],
+                ["/meista", t("nav.about")],
                 ["/tournaments", t("nav.tournaments")],
                 ["/rankings", t("nav.rankings")],
                 ["/teams", t("nav.teams")],
                 ["/teamfinder", t("nav.teamfinder")],
                 ["/watch", t("nav.watch")],
-                ["/meista", t("nav.about")],
               ].map(([to, label]) => (
                 <Link
                   key={to}

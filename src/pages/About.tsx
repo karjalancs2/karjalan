@@ -41,9 +41,9 @@ export default function About() {
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
       <section className="relative overflow-hidden border border-neutral-800 bg-neutral-900/50 p-8 sm:p-12 lg:p-16">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-red-600/10 blur-3xl" />
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="relative max-w-4xl">
-          <p className="mb-5 text-xs font-bold uppercase tracking-[0.3em] text-red-500">
+          <p className="mb-5 text-xs font-bold uppercase tracking-[0.3em] text-amber-400">
             Karjalan · Espoo, Suomi
           </p>
           <h1 className="mb-8 text-4xl font-black uppercase tracking-tight sm:text-6xl">
@@ -81,7 +81,7 @@ export default function About() {
               <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">
                 {label}
               </span>
-              <Icon className="h-5 w-5 text-red-500" aria-hidden="true" />
+              <Icon className="h-5 w-5 text-amber-400" aria-hidden="true" />
             </div>
             <p className="font-mono text-4xl font-bold text-white">{value}</p>
           </article>
@@ -90,7 +90,7 @@ export default function About() {
 
       <section className="mt-24">
         <div className="mb-10 max-w-2xl">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-red-500">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-amber-400">
             Pelaajasta kilpailijaksi
           </p>
           <h2 className="text-3xl font-black uppercase tracking-tight sm:text-4xl">
@@ -108,7 +108,7 @@ export default function About() {
                   {number} / 03
                 </span>
                 <Icon
-                  className="h-6 w-6 text-red-500"
+                  className="h-6 w-6 text-amber-400"
                   aria-hidden="true"
                 />
               </div>
@@ -129,7 +129,7 @@ export default function About() {
 
       <section className="mt-24">
         <div className="mb-10 max-w-2xl">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-red-500">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.25em] text-amber-400">
             Rakennetaan yhdessä
           </p>
           <h2 className="text-3xl font-black uppercase tracking-tight sm:text-4xl">
@@ -138,18 +138,18 @@ export default function About() {
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <a
-            href="mailto:contact@karjalan.net"
+            href="mailto:karjalancs2@gmail.com"
             className="group flex items-start gap-5 border border-neutral-800 bg-neutral-900/40 p-7 transition-colors hover:border-neutral-600 sm:p-8"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center border border-neutral-700 bg-black text-red-500">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center border border-neutral-700 bg-black text-amber-400">
               <Mail className="h-5 w-5" aria-hidden="true" />
             </span>
             <span>
               <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-500">
                 Sähköposti
               </span>
-              <span className="text-lg font-semibold text-white group-hover:text-red-400">
-                contact@karjalan.net
+              <span className="text-lg font-semibold text-white group-hover:text-amber-300">
+                karjalancs2@gmail.com
               </span>
             </span>
           </a>
@@ -159,14 +159,14 @@ export default function About() {
             rel="noopener noreferrer"
             className="group flex items-start gap-5 border border-neutral-800 bg-neutral-900/40 p-7 transition-colors hover:border-neutral-600 sm:p-8"
           >
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center border border-neutral-700 bg-black text-red-500">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center border border-neutral-700 bg-black text-amber-400">
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
             </span>
             <span>
               <span className="mb-2 block text-xs font-bold uppercase tracking-widest text-neutral-500">
                 Discord-tuki
               </span>
-              <span className="text-lg font-semibold text-white group-hover:text-red-400">
+              <span className="text-lg font-semibold text-white group-hover:text-amber-300">
                 Avaa tukitiketti #avaa-tiketti -kanavalla
               </span>
             </span>

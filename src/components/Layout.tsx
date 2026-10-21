@@ -49,10 +49,10 @@ export function Layout({ children }: { children: ReactNode }) {
               Yhteystiedot
             </h2>
             <a
-              href="mailto:contact@karjalan.net"
+              href="mailto:karjalancs2@gmail.com"
               className="block text-neutral-500 hover:text-white transition-colors text-sm"
             >
-              contact@karjalan.net
+              karjalancs2@gmail.com
             </a>
             <a
               href="https://discord.gg/29mjT4eqR"
