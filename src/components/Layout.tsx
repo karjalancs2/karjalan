@@ -8,38 +8,59 @@ export function Layout({ children }: { children: ReactNode }) {
       <Navbar />
       <main className="flex-1 flex flex-col relative z-0">{children}</main>
       <footer className="border-t border-neutral-900 bg-black py-12 mt-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center gap-6">
-          <div className="text-2xl font-bold tracking-widest text-neutral-500 flex items-center gap-3">
-            <KarjalanMark className="w-8 h-8 opacity-50 grayscale" />
-            KARJALAN
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center gap-8 md:flex-row md:justify-between">
+          <div className="flex flex-col items-center justify-center gap-6">
+            <div className="text-2xl font-bold tracking-widest text-neutral-500 flex items-center gap-3">
+              <KarjalanMark className="w-8 h-8 opacity-50 grayscale" />
+              KARJALAN
+            </div>
+            <p className="text-neutral-600 text-sm">
+              Suomalaisen CS2-kilpapelaamisen koti.
+            </p>
+            <div className="flex gap-4">
+              <a
+                href="https://discord.gg/29mjT4eqR"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-500 hover:text-white transition-colors text-sm"
+              >
+                Discord
+              </a>
+              <a
+                href="https://x.com/Karjalancs2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-500 hover:text-white transition-colors text-sm"
+              >
+                X
+              </a>
+              <a
+                href="https://www.twitch.tv/karjalancs2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-500 hover:text-white transition-colors text-sm"
+              >
+                Twitch
+              </a>
+            </div>
           </div>
-          <p className="text-neutral-600 text-sm">
-            Suomalaisen CS2-kilpapelaamisen koti.
-          </p>
-          <div className="flex gap-4">
+          <div className="text-center md:text-right">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-neutral-300 mb-3">
+              Yhteystiedot
+            </h2>
+            <a
+              href="mailto:contact@karjalan.net"
+              className="block text-neutral-500 hover:text-white transition-colors text-sm"
+            >
+              contact@karjalan.net
+            </a>
             <a
               href="https://discord.gg/29mjT4eqR"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-neutral-500 hover:text-white transition-colors text-sm"
+              className="mt-2 block text-neutral-500 hover:text-white transition-colors text-sm"
             >
-              Discord
-            </a>
-            <a
-              href="https://x.com/Karjalancs2"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-neutral-500 hover:text-white transition-colors text-sm"
-            >
-              X
-            </a>
-            <a
-              href="https://www.twitch.tv/karjalancs2"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-neutral-500 hover:text-white transition-colors text-sm"
-            >
-              Twitch
+              Avaa tukitiketti #avaa-tiketti
             </a>
           </div>
         </div>

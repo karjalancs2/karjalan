@@ -21,6 +21,7 @@ import Auth from "./pages/Auth";
 import LinkFaceitTeam from "./pages/LinkFaceitTeam";
 import NotFound from "./pages/NotFound";
 import AdminTournaments from "./pages/AdminTournaments";
+import About from "./pages/About";
 
 function AdminRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -39,6 +40,7 @@ export default function App() {
             <ErrorBoundary>
               <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/meista" element={<About />} />
                 <Route path="/tournaments" element={<Tournaments />} />
                 <Route
                   path="/tournaments/:id"

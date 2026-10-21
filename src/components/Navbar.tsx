@@ -117,6 +117,12 @@ export function Navbar() {
               >
                 {t("nav.watch")}
               </Link>
+              <Link
+                to="/meista"
+                className="text-sm font-medium text-neutral-300 hover:text-white transition-colors"
+              >
+                {t("nav.about")}
+              </Link>
             </div>
           </div>
 
@@ -211,6 +217,7 @@ export function Navbar() {
                 ["/teams", t("nav.teams")],
                 ["/teamfinder", t("nav.teamfinder")],
                 ["/watch", t("nav.watch")],
+                ["/meista", t("nav.about")],
               ].map(([to, label]) => (
                 <Link
                   key={to}
